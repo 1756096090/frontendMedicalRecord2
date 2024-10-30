@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import { RoleController } from "../../../controllers/RoleController";
+import { Role } from "../../../models/Role";
+import { Specialist } from "../../../models/Specialist";
+import { RoleUser, SpecialistUser } from "../../../models/User";
+import { SpecialistController } from "../../../controllers/SpecialistController";
 
 type User = {
   id?: string;
@@ -10,35 +15,27 @@ type User = {
   dni: string;
   password: string;
   birthDate: string;
-  role: Role | null;
-  specialist: Specialist | null;
-};
-
-type Role = {
-  id: string;
-  name: string;
-};
-
-type Specialist = {
-  id: string;
-  name: string;
+  role: string | null; // Cambiado a string
+  specialist: string | null; // Cambiado a string
 };
 
 const UserEdit: React.FC = () => {
   const [user, setUser] = useState<User>({
-    email: '',
-    name: '',
-    phone: '',
-    address: '',
-    gender: '',
-    dni: '',
-    password: '',
-    birthDate: '',
+    email: "",
+    name: "",
+    phone: "",
+    address: "",
+    gender: "",
+    dni: "",
+    password: "",
+    birthDate: "",
     role: null,
     specialist: null,
   });
   const [roles, setRoles] = useState<Role[]>([]);
   const [specialists, setSpecialists] = useState<Specialist[]>([]);
+  const roleController = new RoleController();
+  const specialistController = new SpecialistController();
 
   useEffect(() => {
     // Fetch roles and specialists from the server
@@ -48,68 +45,56 @@ const UserEdit: React.FC = () => {
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch('/api/roles');
-      const data = await response.json();
-      setRoles(data);
+      const fetchedRoles = await roleController.getRoles();
+      setRoles(fetchedRoles);
     } catch (error) {
-      console.error('Error fetching roles:', error);
+      console.error("Error fetching roles:", error);
     }
   };
 
   const fetchSpecialists = async () => {
     try {
-      const response = await fetch('/api/specialists');
-      const data = await response.json();
-      setSpecialists(data);
+      const fetchedSpecialists = await specialistController.getSpecialists();
+      setSpecialists(fetchedSpecialists);
     } catch (error) {
-      console.error('Error fetching specialists:', error);
+      console.error("Error fetching specialists:", error);
     }
   };
 
   const handleSave = async () => {
     try {
-      let response;
-      if (user.id) {
-        // Update existing user
-        response = await fetch(`/api/users/${user.id}`, {
-          method: 'PUT',
+      const response = await fetch(
+        `/api/users${user.id ? `/${user.id}` : ""}`,
+        {
+          method: user.id ? "PUT" : "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(user),
-        });
-      } else {
-        // Create new user
-        response = await fetch('/api/users', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(user),
-        });
-      }
+        }
+      );
+
       if (response.ok) {
         // Redirect to the user management page
-        window.location.href = '/user-management';
+        window.location.href = "/user-management";
       } else {
-        console.error('Error saving user:', await response.json());
+        console.error("Error saving user:", await response.json());
       }
     } catch (error) {
-      console.error('Error saving user:', error);
+      console.error("Error saving user:", error);
     }
   };
 
   const handleReturn = () => {
     // Redirect to the user management page
-    window.location.href = '/user-management';
+    window.location.href = "/user-management";
   };
 
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold">
-        {user.id ? 'Edit User' : 'Create User'}
+        {user.id ? "Edit User" : "Create User"}
       </h1>
-
       <div className="mb-4">
         <input
           type="text"
@@ -168,43 +153,40 @@ const UserEdit: React.FC = () => {
           className="border p-2 mr-2"
         />
         <select
-          value={user.role?.id || ''}
+          value={user.role || ""}
           onChange={(e) =>
             setUser({
               ...user,
-              role: roles.find((r) => r.id === e.target.value) || null,
+              role: e.target.value || null, // Solo almacena el ID
             })
           }
           className="border p-2 mr-2"
         >
           <option value="">Select Role</option>
           {roles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
+            <option key={role.ID} value={role.ID}>
+              {role.Name}
             </option>
           ))}
         </select>
-        <select
-          value={user.specialist?.id || ''}
-          onChange={(e) =>
-            setUser({
-              ...user,
-              specialist: specialists.find((s) => s.id === e.target.value) || null,
-            })
-          }
-          className="border p-2 mr-2"
-        >
+        <select value={user.specialist || ""}
+        onChange={(e) =>
+          setUser({
+            ...user,
+            role: e.target.value || null, // Solo almacena el ID
+          })
+        }
+         className="border p-2 mr-2">
           <option value="">Select Specialist</option>
           {specialists.map((specialist) => (
-            <option key={specialist.id} value={specialist.id}>
-              {specialist.name}
+            <option key={specialist.ID} value={specialist.ID}>
+              {" "}
+              {/* Asegúrate de que specialist.ID es único */}
+              {specialist.Specialization}
             </option>
           ))}
         </select>
-        <button
-          onClick={handleSave}
-          className="bg-blue-500 text-white p-2"
-        >
+        <button onClick={handleSave} className="bg-blue-500 text-white p-2">
           Save
         </button>
       </div>
