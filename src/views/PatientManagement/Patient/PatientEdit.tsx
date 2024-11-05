@@ -117,7 +117,7 @@ const PatientEdit: React.FC = () => {
             } else {
                 await controller.addPatient(patient);
             }
-            navigate('/patients');
+            navigate('/patient-management');
         } catch (error) {
             console.error("Failed to save patient", error);
         }
