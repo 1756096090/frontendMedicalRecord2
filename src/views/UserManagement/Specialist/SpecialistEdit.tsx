@@ -28,19 +28,42 @@ const SpecialistEdit: React.FC = () => {
     }, [id]);
 
     const handleSave = async () => {
-        const specialist: Specialist = { ID: id !== 'new' ? id || '' : '', Specialization: specialization, Description: description, YearsOfExperience: Number(yearsOfExperience)};
-
+        if (!specialization.trim()) {
+            alert("La especialización no puede estar vacía.");
+            return;
+        }
+        if (!description.trim()) {
+            alert("La descripción no puede estar vacía.");
+            return;
+        }
+        if (yearsOfExperience === '' || Number(yearsOfExperience) < 0) {
+            alert("Los años de experiencia deben ser un número no negativo");
+            return;
+        }
+    
+        const specialist: Specialist = { 
+            ID: id !== 'new' ? id || '' : '', 
+            Specialization: specialization, 
+            Description: description, 
+            YearsOfExperience: Number(yearsOfExperience)
+        };
+    
         try {
             if (id !== 'new') {
                 await controller.editSpecialist(specialist);
             } else {
-                await controller.addSpecialist({ Specialization: specialization, Description: description, YearsOfExperience: Number(yearsOfExperience)});
+                await controller.addSpecialist({ 
+                    Specialization: specialization, 
+                    Description: description, 
+                    YearsOfExperience: Number(yearsOfExperience) 
+                });
             }
             navigate('/user-management');  
         } catch (error) {
             console.error("Failed to save specialist", error);
         }
     };
+    
 
     const handleReturn = () => {
         navigate('/user-management');
@@ -48,26 +71,26 @@ const SpecialistEdit: React.FC = () => {
 
     return (
         <div className="p-4">
-            <h1 className="text-2xl font-bold">{id === 'new' ? 'Crear Usuario' : 'Editar Usuario'}</h1>
+            <h1 className="text-2xl font-bold">{id === 'new' ? 'Crear Especialista' : 'Editar Especialista'}</h1>
 
             <div className="mb-4">
                 <input
                     type="text"
-                    placeholder="Name"
+                    placeholder="Nombre del specialización"	
                     value={specialization}
                     onChange={(e) => setSpecialization(e.target.value)}
                     className="border p-2 mr-2"
                 />
                 <input
                     type="text"
-                    placeholder="Email"
+                    placeholder="Descripción"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="border p-2 mr-2"
                 />
                 <input
                     type="number"
-                    placeholder="Age"
+                    placeholder="Años de experiencia"
                     value={yearsOfExperience}
                     onChange={(e) => setYearsOfExperience(e.target.value)}
                     className="border p-2 mr-2"
@@ -77,14 +100,14 @@ const SpecialistEdit: React.FC = () => {
                     onClick={handleSave}
                     className="bg-blue-500 text-white p-2"
                 >
-                    Save
+                    Guardar
                 </button>
             </div>
             <button
                 onClick={handleReturn}
                 className="text-black p-3 rounded-lg shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ease-in-out duration-300"
             >
-                Return
+                Regresar
             </button>
         </div>
     );

@@ -4,10 +4,9 @@ import { Specialist } from '../../../models/Specialist';
 interface SpecialistListViewProps {
     specialists: Specialist[];
     onEdit: (id: string) => void;
-    onDelete: (id: string) => void;
 }
 
-const SpecialistListView: React.FC<SpecialistListViewProps> = ({ specialists, onEdit, onDelete }) => {
+const SpecialistListView: React.FC<SpecialistListViewProps> = ({ specialists, onEdit }) => {
     return (
         <table className="min-w-full border-collapse border border-gray-200">
             <thead>
@@ -30,12 +29,6 @@ const SpecialistListView: React.FC<SpecialistListViewProps> = ({ specialists, on
                                 className="bg-yellow-500 text-white p-1 mr-1 hover:bg-yellow-400"
                             >
                                 Editar
-                            </button>
-                            <button
-                                onClick={() => onDelete(specialist.ID ?? '')}
-                                className="bg-red-500 text-white p-1 hover:bg-red-400"
-                            >
-                                Eliminar
                             </button>
                         </td>
                     </tr>

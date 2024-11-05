@@ -1,3 +1,4 @@
+
 export interface User {
     ID:         string;
     Email:      string;
@@ -8,18 +9,8 @@ export interface User {
     DNI:        string;
     Password:   string;
     BirthDate:  Date;
-    Role:       RoleUser;
-    Specialist: SpecialistUser;
+    RoleID:       string;
+    SpecialistID: string;
     HasAccess:  boolean;
 }
 
-export interface RoleUser {
-    Name:        string;
-    Permissions: string[];
-}
-
-export interface SpecialistUser {
-    Specialization:    string;
-    Description:       string;
-    YearsOfExperience: number;
-}
