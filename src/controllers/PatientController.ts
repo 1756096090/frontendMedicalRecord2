@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Patient } from '../models/Patient';
 import {
     fetchPatients,
@@ -11,9 +12,10 @@ export class PatientController {
     async getPatients(): Promise<Patient[]> {
         try {
             return await fetchPatients();
-        } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error:any) {
             console.error('Failed to fetch patients:', error);
-            throw new Error('Could not fetch patients.');
+            throw new Error(error);
         }
     }
 
@@ -38,9 +40,9 @@ export class PatientController {
     async editPatient(patient: Patient): Promise<Patient> {
         try {
             return await updatePatient(patient);
-        } catch (error) {
+        } catch (error:any) {
             console.error('Failed to update patient:', error);
-            throw new Error('Could not update patient.');
+            throw new Error(error.message);
         }
     }
 

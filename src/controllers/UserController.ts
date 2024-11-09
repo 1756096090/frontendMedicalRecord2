@@ -39,9 +39,11 @@ export class UserController {
     async editUser(user: User): Promise<User> {
         try {
             return await updateUser(user);
-        } catch (error) {
-            console.error('Failed to update user:', error);
-            throw new Error('Could not update user.');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error:any) {
+            const resp = error.message
+            console.log('Failed to update user:', resp);
+            throw new Error(resp);
         }
     }
 

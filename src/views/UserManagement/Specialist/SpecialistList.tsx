@@ -26,7 +26,7 @@ const SpecialistListView: React.FC<SpecialistListViewProps> = ({ specialists, on
                         <td className="border border-gray-200 p-2">
                             <button
                                 onClick={() => onEdit(specialist.ID ?? '')}
-                                className="bg-yellow-500 text-white p-1 mr-1 hover:bg-yellow-400"
+                                className="bg-yellow-500 text-white p-1 mr-1 hover:bg-yellow-400 rounded-lg"
                             >
                                 Editar
                             </button>

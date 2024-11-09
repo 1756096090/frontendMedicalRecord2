@@ -1,18 +1,12 @@
 // src/services/userService.ts
 import { User } from '../models/User';
 import config from '../config';
+import { handleResponse } from './handleResponse';
 
 const API_URL = `${config.API_BASE_URL}/user`;
 
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const handleResponse = async (response: Response): Promise<any> => {
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Error ${response.status}: ${errorData.message || 'Network response was not ok'}`);
-    }
-    return response.json();
-};
+
 
 export const fetchUsers = async (): Promise<User[]> => {
     const response = await fetch(API_URL);
@@ -63,5 +57,5 @@ export const login = async (email: string, password: string): Promise<string> =>
     });
     
     const data = await handleResponse(response);
-    return data; 
+    return data as string; 
 };

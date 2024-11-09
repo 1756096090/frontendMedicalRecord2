@@ -20,9 +20,10 @@ export class SpecialistController {
     async getSpecialist(id: string): Promise<Specialist> {
         try {
             return await fetchSpecialistById(id);
-        } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error:any) {
             console.error(`Failed to fetch specialist with ID ${id}:`, error);
-            throw new Error('Could not fetch specialist.');
+            throw new Error(error);
         }
     }
 
@@ -38,9 +39,10 @@ export class SpecialistController {
     async editSpecialist(specialist: Specialist): Promise<Specialist> {
         try {
             return await updateSpecialist(specialist);
-        } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error:any) {
             console.error('Failed to update specialist:', error);
-            throw new Error('Could not update specialist.');
+            throw new Error(error.message);
         }
     }
 

@@ -158,7 +158,7 @@ const UserEdit: React.FC = () => {
         Address: user.Address,
         Gender: user.Gender,
         DNI: user.DNI,
-        Password: user.Password, // Asegúrate de manejar la contraseña de manera segura
+        Password: user.Password, 
         BirthDate: new Date(user.BirthDate),
         RoleID: user.RoleID,
         SpecialistID: user.SpecialistID,
@@ -170,11 +170,13 @@ const UserEdit: React.FC = () => {
       } else {
         await userController.editUser(userToSave);
       }
-
+      
       navigate("/user-management");
-    } catch (error) {
-      setError("Error al guardar el usuario. Por favor, inténtalo de nuevo.");
-      console.error("Save error:", error);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error:any) {
+        errors.push(error.message);
+      setValidationErrors(errors); 
+      return
     } finally {
       setIsLoading(false);
     }

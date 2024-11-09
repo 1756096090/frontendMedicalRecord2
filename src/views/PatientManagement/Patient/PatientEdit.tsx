@@ -14,6 +14,7 @@ const PatientEdit: React.FC = () => {
     const [gender, setGender] = useState<boolean>(true);
     const [concerning, setConcerning] = useState('');
     const [mail, setMail] = useState('');
+    const [dni, setDni] = useState('');
     const [phone, setPhone] = useState('');
     const [occupation, setOccupation] = useState('');
     const [responsible, setResponsible] = useState('');
@@ -37,6 +38,7 @@ const PatientEdit: React.FC = () => {
                 setBirthDate(new Date(patient.BirthDate).toISOString().split('T')[0]);
                 setGender(patient.Gender);
                 setConcerning(patient.Concerning);
+                setDni(patient.DNI);
                 setMail(patient.Mail);
                 setPhone(patient.Phone);
                 setOccupation(patient.Occupation);
@@ -69,19 +71,16 @@ const PatientEdit: React.FC = () => {
         if (!mail.trim()) {
             validationErrors.push("El correo electrónico es requerido.");
         }
-        if (!phone.trim()) {
-            validationErrors.push("El teléfono es requerido.");
-        }
+        if (!phone.trim()) validationErrors.push("El teléfono es requerido.");
+        if (dni.length < 10 || dni.length > 13) errors.push("El DNI debe tener entre 10 y 13 dígitos.");
+        
         
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (mail && !emailRegex.test(mail)) {
             validationErrors.push("El correo electrónico no es válido.");
         }
         
-        const phoneRegex = /^\+?[1-9]\d{1,14}$/; // Formato E.164
-        if (phone && !phoneRegex.test(phone)) {
-            validationErrors.push("El número de teléfono no es válido.");
-        }
+
 
         setErrors(validationErrors);
         return validationErrors.length === 0;
@@ -98,6 +97,7 @@ const PatientEdit: React.FC = () => {
             Concerning: concerning,
             Mail: mail,
             Phone: phone,
+            DNI: dni,
             Occupation: occupation,
             Responsible: responsible,
             HasInsurance: hasInsurance,
@@ -118,7 +118,10 @@ const PatientEdit: React.FC = () => {
                 await controller.addPatient(patient);
             }
             navigate('/patient-management');
-        } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error:any) {
+            errors.push(error.message as string);
+            setErrors(errors);
             console.error("Failed to save patient", error);
         }
     };
@@ -173,6 +176,13 @@ const PatientEdit: React.FC = () => {
                         placeholder="Motivo de consulta"
                         value={concerning}
                         onChange={(e) => setConcerning(e.target.value)}
+                        className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                        type="text"
+                        placeholder="DNI"
+                        value={dni}
+                        onChange={(e) => setDni(e.target.value)}
                         className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500"
                     />
                     <input

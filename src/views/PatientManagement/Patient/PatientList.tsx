@@ -22,6 +22,7 @@ const PatientListView: React.FC<PatientListViewProps> = ({ patients, onEdit }) =
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Fecha de Nacimiento</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Género</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Motivo de Consulta</th>
+                        <th className="border border-gray-200 p-2 bg-gray-50" scope="col">DNI</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Correo</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Teléfono</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Ocupación</th>
@@ -37,6 +38,7 @@ const PatientListView: React.FC<PatientListViewProps> = ({ patients, onEdit }) =
                             <td className="border border-gray-200 p-2">{formatDate(patient.BirthDate)}</td>
                             <td className="border border-gray-200 p-2">{patient.Gender ? 'Masculino' : 'Femenino'}</td>
                             <td className="border border-gray-200 p-2">{patient.Concerning}</td>
+                            <td className="border border-gray-200 p-2">{patient.DNI}</td>
                             <td className="border border-gray-200 p-2">{patient.Mail}</td>
                             <td className="border border-gray-200 p-2">{patient.Phone}</td>
                             <td className="border border-gray-200 p-2">{patient.Occupation}</td>
