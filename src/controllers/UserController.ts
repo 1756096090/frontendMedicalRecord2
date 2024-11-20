@@ -1,3 +1,5 @@
+import { Role } from '../models/Role';
+import { Specialist } from '../models/Specialist';
 import { User } from '../models/User';
 import {
     fetchUsers,
@@ -6,7 +8,14 @@ import {
     deleteUser,
     fetchUserById,
     login,
+    fetchUserWithRoleAndSpecialty,
 } from '../services/User';
+
+interface UserAllInfo {
+    user: User;
+    role: Role;
+    specialist: Specialist;
+}
 
 export class UserController {
     async getUsers(): Promise<User[]> {
@@ -21,6 +30,15 @@ export class UserController {
     async getUser(id: string): Promise<User> {
         try {
             return await fetchUserById(id);
+        } catch (error) {
+            console.error(`Failed to fetch user with ID ${id}:`, error);
+            throw new Error('Could not fetch user.');
+        }
+    }
+
+    async GetUserWithRoleAndSpecialty(id: string): Promise<UserAllInfo> {
+        try {
+            return await fetchUserWithRoleAndSpecialty(id);
         } catch (error) {
             console.error(`Failed to fetch user with ID ${id}:`, error);
             throw new Error('Could not fetch user.');

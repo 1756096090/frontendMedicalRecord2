@@ -7,7 +7,7 @@ const Layout: React.FC = () => {
   return (
     <div className="grid grid-cols-[200px_1fr] min-h-screen bg-gray-100"> {}
       <Sidebar />
-      <main className="p-6 overflow-y-auto"> {}
+      <main className="overflow-y-auto"> {}
         <ProtectedRoute>
           <Outlet />
         </ProtectedRoute>

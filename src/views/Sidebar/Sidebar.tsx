@@ -11,28 +11,69 @@ const Sidebar: React.FC = () => {
         navigate('/');
     };
 
+    const handleRoles = (arr: string[]): boolean => {
+        // Get roles from localStorage and parse them, or default to an empty array
+        const roles = JSON.parse(localStorage.getItem('role') || '[]');
+        console.log("🚀 ~ handleRoles ~ roles:", roles)
+        
+        // Check if all roles exist in the predefined roles
+        return arr.every(role => roles.includes(role));
+    };
+
     return (
         <aside className="bg-gray-800 text-white h-full p-4">
             <div className="flex flex-col h-full">
                 <div className="flex-grow">
                     <h1 className="text-xl font-bold mb-6">Dashboard</h1>
+
                     <ul className="space-y-4">
-                        <li>
-                            <a 
-                                href="/user-management" 
-                                className="block text-lg hover:text-gray-300 transition-colors duration-200"
-                            >
-                                Administrar Usuarios
-                            </a>
-                        </li>
-                        <li>
-                            <a 
-                                href="/patient-management" 
-                                className="block text-lg hover:text-gray-300 transition-colors duration-200"
-                            >
-                                Administrar Pacientes
-                            </a>
-                        </li>
+                        {/* Conditionally render "Administrar Usuarios" */}
+                        {handleRoles(["generate_medical_records", "manage_patient_info"]) && (
+                            <li>
+                                <a 
+                                    href="/user-management" 
+                                    className="block text-lg hover:text-gray-300 transition-colors duration-200"
+                                >
+                                    Administrar Usuarios
+                                </a>
+                            </li>
+                        )}
+
+                        {/* Conditionally render "Administrar Pacientes" */}
+                        {handleRoles(["manage_patient_info"]) && (
+                            <li>
+                                <a 
+                                    href="/patient-management" 
+                                    className="block text-lg hover:text-gray-300 transition-colors duration-200"
+                                >
+                                    Administrar Pacientes
+                                </a>
+                            </li>
+                        )}
+
+                        {/* Conditionally render "Generate Medical Records" */}
+                        {handleRoles(["generate_medical_records"]) && (
+                            <li>
+                                <a 
+                                    href="/medical-records" 
+                                    className="block text-lg hover:text-gray-300 transition-colors duration-200"
+                                >
+                                    Generar Registros Médicos
+                                </a>
+                            </li>
+                        )}
+
+                        {/* Conditionally render "Schedule" */}
+                        {handleRoles(["schedule"]) && (
+                            <li>
+                                <a 
+                                    href="/schedule" 
+                                    className="block text-lg hover:text-gray-300 transition-colors duration-200"
+                                >
+                                    Programar Citas
+                                </a>
+                            </li>
+                        )}
                     </ul>
                 </div>
                 <button
