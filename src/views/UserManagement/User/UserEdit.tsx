@@ -112,6 +112,7 @@ const UserEdit: React.FC = () => {
       SpecialistID: selectedSpecialistID
     }));
   };
+  
   const phoneRegex = /^\+?[0-9\s\-()]{7,15}$/; 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

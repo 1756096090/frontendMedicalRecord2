@@ -12,12 +12,10 @@ const Sidebar: React.FC = () => {
     };
 
     const handleRoles = (arr: string[]): boolean => {
-        // Get roles from localStorage and parse them, or default to an empty array
         const roles = JSON.parse(localStorage.getItem('role') || '[]');
-        console.log("🚀 ~ handleRoles ~ roles:", roles)
+        console.log("🚀 ~ handleRoles ~ arr:", arr,roles)
         
-        // Check if all roles exist in the predefined roles
-        return arr.every(role => roles.includes(role));
+        return arr.some(role => roles.includes(role));
     };
 
     return (
@@ -27,8 +25,7 @@ const Sidebar: React.FC = () => {
                     <h1 className="text-xl font-bold mb-6">Dashboard</h1>
 
                     <ul className="space-y-4">
-                        {/* Conditionally render "Administrar Usuarios" */}
-                        {handleRoles(["generate_medical_records", "manage_patient_info"]) && (
+                        {handleRoles(["generate_medical_records", "manage_users"]) && (
                             <li>
                                 <a 
                                     href="/user-management" 
@@ -39,7 +36,6 @@ const Sidebar: React.FC = () => {
                             </li>
                         )}
 
-                        {/* Conditionally render "Administrar Pacientes" */}
                         {handleRoles(["manage_patient_info"]) && (
                             <li>
                                 <a 
@@ -51,7 +47,6 @@ const Sidebar: React.FC = () => {
                             </li>
                         )}
 
-                        {/* Conditionally render "Generate Medical Records" */}
                         {handleRoles(["generate_medical_records"]) && (
                             <li>
                                 <a 
@@ -63,7 +58,6 @@ const Sidebar: React.FC = () => {
                             </li>
                         )}
 
-                        {/* Conditionally render "Schedule" */}
                         {handleRoles(["schedule"]) && (
                             <li>
                                 <a 

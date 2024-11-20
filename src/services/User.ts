@@ -4,7 +4,7 @@ import config from '../config';
 import { handleResponse } from './handleResponse';
 import { Role } from '../models/Role';
 import { Specialist } from '../models/Specialist';
-
+import { Doctor } from '../models/UserDoctor';
 const API_URL = `${config.API_BASE_URL}/user`;
 interface UserAllInfo {
     user: User;
@@ -27,6 +27,12 @@ export const fetchUserWithRoleAndSpecialty = async (id: string): Promise<UserAll
     const response = await fetch(`${API_URL}/all-info/${id}`);
     return handleResponse(response);
 };
+
+export const fetchDoctors = async (): Promise<Doctor[]> => {
+    const response = await fetch(`${API_URL}/doctors`);
+    return handleResponse(response);
+}
+
 
 export const createUser = async (user: Omit<User, 'ID'>): Promise<User> => {
     const response = await fetch(API_URL, {
@@ -57,6 +63,7 @@ export const deleteUser = async (id: string ): Promise<void> => {
     });
     return handleResponse(response);
 };
+
 
 export const login = async (email: string, password: string): Promise<string> => {
     const response = await fetch(`${API_URL}/login`, {

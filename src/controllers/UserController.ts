@@ -1,8 +1,10 @@
 import { Role } from '../models/Role';
 import { Specialist } from '../models/Specialist';
 import { User } from '../models/User';
+import { Doctor } from '../models/UserDoctor';
 import {
     fetchUsers,
+    fetchDoctors,
     createUser,
     updateUser,
     deleteUser,
@@ -32,6 +34,15 @@ export class UserController {
             return await fetchUserById(id);
         } catch (error) {
             console.error(`Failed to fetch user with ID ${id}:`, error);
+            throw new Error('Could not fetch user.');
+        }
+    }  
+
+    async getDoctors() :Promise<Doctor[]>{
+        try {
+            return await fetchDoctors()
+        } catch (error) {
+            console.error(`Failed to fetch user with ID `, error);
             throw new Error('Could not fetch user.');
         }
     }
