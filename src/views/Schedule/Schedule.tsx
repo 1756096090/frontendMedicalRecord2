@@ -4,7 +4,6 @@ import { UserController } from '../../controllers/UserController';
 import { Doctor } from '../../models/UserDoctor';
 import { Patient } from '../../models/Patient';
 import { PatientController } from '../../controllers/PatientController';
-import { fetchPatients } from '../../services/Patient';
 
 interface Event {
     Id: number;
@@ -13,165 +12,174 @@ interface Event {
     IdPatient: string;
     StartAppointment: Date;
     EndAppointment: Date;
-    StartOriginalDate: Date;
+    StartOriginalDate: Date | null;
     Text: string;
 }
 
 export const Schedule = () => {
-
-    const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const monthsOfYear = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
-    ]
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+
     const currentDate = new Date();
-    const [doctors, setDoctors] = useState<Doctor[]>([])
-    const [patients, setPatients] = useState<Patient[]>([])
-    const [currentMonth, setCurrentMonth] = useState(currentDate.getMonth())
-    const [currentYear, setCurrentYear] = useState(currentDate.getFullYear())
+    const [doctors, setDoctors] = useState<Doctor[]>([]);
+    const [patients, setPatients] = useState<Patient[]>([]);
+    const [currentMonth, setCurrentMonth] = useState(currentDate.getMonth());
+    const [currentYear, setCurrentYear] = useState(currentDate.getFullYear());
     const [selectedDate, setSelectedDate] = useState(currentDate);
     const [showEventPopup, setShowEventPopup] = useState(false);
     const [events, setEvents] = useState<Event[]>([]);
-    const [eventTime, setEventTime] = useState({ hours: '00', minutes: '00' });
-    const [eventIdPatient, setEventPatient] = useState("");
-    const [eventIdDoctor, setEventDoctor] = useState("");
-    const [eventStartAppointment, setEventStartAppointment] = useState<Date |null>(null);
-    const [eventEndAppointment, setEventEndAppointment] = useState<Date |null>(null);
-    const [eventText, setEventText] = useState('')
+    const [eventStartTime, setEventStartTime] = useState({ hours: '00', minutes: '00' });
+    const [eventEndTime, setEventEndTime] = useState({ hours: '00', minutes: '00' });
+    const [eventIdPatient, setEventIdPatient] = useState("");
+    const [eventIdDoctor, setEventIdDoctor] = useState("");
+    const [eventText, setEventText] = useState('');
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-    //services
     const [userController] = useState(new UserController());
     const [patientController] = useState(new PatientController());
 
     const loadDoctors = useCallback(async () => {
         try {
             const fetchDoctors = await userController.getDoctors();
-            console.log(fetchDoctors);
             setDoctors(fetchDoctors);
         } catch (error) {
             console.error("Failed to load doctors", error);
         }
-    }, [userController])
+    }, [userController]);
 
     const loadPatients = useCallback(async () => {
         try {
             const fetchPatients = await patientController.getPatients();
-            console.log(fetchPatients);
             setPatients(fetchPatients);
         } catch (error) {
-            console.error("Failed to load doctors", error);
+            console.error("Failed to load patients", error);
         }
-    }, [patientController])
+    }, [patientController]);
 
     useEffect(() => {
         loadDoctors();
         loadPatients();
-    }, [loadDoctors, loadPatients])
+    }, [loadDoctors, loadPatients]);
 
     const prevMonth = () => {
-        setCurrentMonth((prevMonth) => (prevMonth === 0 ? 11 : prevMonth - 1));
-        setCurrentYear(prevYear => (currentMonth === 0 ? prevYear - 1 : prevYear));
-    }
+        setCurrentMonth(prevMonth => prevMonth === 0 ? 11 : prevMonth - 1);
+        setCurrentYear(prevYear => currentMonth === 0 ? prevYear - 1 : prevYear);
+    };
 
     const nextMonth = () => {
-        setCurrentMonth((prevMonth) => (prevMonth === 11 ? 0 : prevMonth + 1));
-        setCurrentYear(prevYear => (currentMonth === 11 ? prevYear + 1 : prevYear));
-    }
+        setCurrentMonth(prevMonth => prevMonth === 11 ? 0 : prevMonth + 1);
+        setCurrentYear(prevYear => currentMonth === 11 ? prevYear + 1 : prevYear);
+    };
 
     const handleDayClick = (day: number) => {
-        const clickedDate = new Date(currentYear, currentMonth, day)
-        const today = new Date()
+        const clickedDate = new Date(currentYear, currentMonth, day);
+        const today = new Date();
 
         if (clickedDate >= today || isSameDay(clickedDate, today)) {
             setSelectedDate(clickedDate);
             setShowEventPopup(true);
             setEventText("");
-            setEventTime({ hours: '00', minutes: '00' });
+            setEventStartTime({ hours: '00', minutes: '00' });
+            setEventEndTime({ hours: '00', minutes: '00' });
             setEditingEvent(null);
 
+            if (doctors.length > 0 && !eventIdDoctor) {
+                setEventIdDoctor(doctors[0].ID);
+            }
+            if (patients.length > 0 && !eventIdPatient) {
+                setEventIdPatient(patients[0].ID);
+            }
         }
-    }
+    };
 
     const isSameDay = (date1: Date, date2: Date) => {
         return (
             date1.getFullYear() === date2.getFullYear() &&
             date1.getMonth() === date2.getMonth() &&
             date1.getDate() === date2.getDate()
-        )
-    }
+        );
+    };
+
+    const createDateFromTimeInputs = (date: Date, time: { hours: string, minutes: string }): Date => {
+        const newDate = new Date(date);
+        newDate.setHours(parseInt(time.hours));
+        newDate.setMinutes(parseInt(time.minutes));
+        return newDate;
+    };
 
     const handleEventSubmit = () => {
-        const newEvent = {
+        const startAppointment = createDateFromTimeInputs(selectedDate, eventStartTime);
+        const endAppointment = createDateFromTimeInputs(selectedDate, eventEndTime);
+
+        if (startAppointment >= endAppointment) {
+            alert("End time must be after start time");
+            return;
+        }
+
+        const newEvent: Event = {
             Id: editingEvent ? editingEvent.Id : Date.now(),
-            Date: Date,
+            Date: selectedDate,
             IdUser: eventIdDoctor,
             IdPatient: eventIdPatient,
-            StartAppointment: Date,
-            EndAppointment: Date,
-            StartOriginalDate: null,
+            StartAppointment: startAppointment,
+            EndAppointment: endAppointment,
+            StartOriginalDate: editingEvent?.StartAppointment || null,
             Text: eventText,
-        }
+        };
 
-        let updatedEvents = [...events]
-        if (editingEvent) {
-            updatedEvents = updatedEvents.map(event => event.Id === editingEvent.Id ? newEvent : event)
-            setEditingEvent(null);
-        } else {
-            updatedEvents.push(newEvent)
-        }
+        setEvents(prevEvents => {
+            const updatedEvents = editingEvent
+                ? prevEvents.map(event => event.Id === editingEvent.Id ? newEvent : event)
+                : [...prevEvents, newEvent];
 
-        updatedEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            return updatedEvents.sort((a, b) =>
+                a.StartAppointment.getTime() - b.StartAppointment.getTime()
+            );
+        });
 
-
-        setEvents(updatedEvents);
-        setEventTime({ hours: '00', minutes: '00' });
+        setEditingEvent(null);
+        setEventStartTime({ hours: '00', minutes: '00' });
+        setEventEndTime({ hours: '00', minutes: '00' });
         setEventText("");
-        setShowEventPopup(false)
-    }
+        setShowEventPopup(false);
+    };
 
     const handleEditEvent = (event: Event) => {
-        setSelectedDate(new Date(event.date));
-        setEventTime(
-            {
-                hours: event.time.split(':')[0],
-                minutes: event.time.split(':')[1]
-            }
-        )
+        setSelectedDate(event.Date);
+        setEventStartTime({
+            hours: event.StartAppointment.getHours().toString().padStart(2, '0'),
+            minutes: event.StartAppointment.getMinutes().toString().padStart(2, '0')
+        });
+        setEventEndTime({
+            hours: event.EndAppointment.getHours().toString().padStart(2, '0'),
+            minutes: event.EndAppointment.getMinutes().toString().padStart(2, '0')
+        });
+        setEventIdDoctor(event.IdUser);
+        setEventIdPatient(event.IdPatient);
         setEventText(event.Text);
         setEditingEvent(event);
         setShowEventPopup(true);
-
-    }
-
-    const handleDeleteEvent = (event: Event) => {
-        const updatedEvents = events.filter(e => e.Id !== event.Id);
-        setEvents(updatedEvents);
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleTimeChange = (e: any) => {
-        const { name, value } = e.target;
-        setEventTime((prevTime) => ({
-            ...prevTime,
-            [name]: value.padStart(2, '0')
-        }));
     };
 
-    const handleDoctorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setEventDoctor(e.target.value);
+    const handleDeleteEvent = (event: Event) => {
+        setEvents(prevEvents => prevEvents.filter(e => e.Id !== event.Id));
+    };
+
+    const handleTimeChange = (timeType: 'start' | 'end', field: 'hours' | 'minutes', value: string) => {
+        const setterFunction = timeType === 'start' ? setEventStartTime : setEventEndTime;
+        const numValue = parseInt(value) || 0;
+        const maxValue = field === 'hours' ? 23 : 59;
+
+        setterFunction(prev => ({
+            ...prev,
+            [field]: Math.min(Math.max(0, numValue), maxValue).toString().padStart(2, '0')
+        }));
     };
 
     return (
@@ -188,68 +196,83 @@ export const Schedule = () => {
                         </div>
                     </div>
                     <div className="weekdays">
-                        {daysOfWeek.map((day) => (
+                        {daysOfWeek.map(day => (
                             <span key={day}>{day}</span>
                         ))}
                     </div>
                     <div className="days">
-                        {
-                            [...Array(firstDayOfMonth).keys()].map((_, index) => {
-                                return <span key={`empty-${index}`}></span>;
-                            })
-                        }
-                        {
-                            [...Array(daysInMonth).keys()].map((day) => {
-                                return <span key={day + 1}
-                                    className={day + 1 === currentDate.getDate() && currentMonth === currentDate.getMonth()
-                                        && currentYear === currentDate.getFullYear()
-                                        ? 'current-day'
-                                        : ''
+                        {[...Array(firstDayOfMonth)].map((_, index) => (
+                            <span key={`empty-${index}`}></span>
+                        ))}
+                        {[...Array(daysInMonth)].map((_, index) => {
+                            const day = index + 1;
+                            return (
+                                <span
+                                    key={day}
+                                    className={
+                                        day === currentDate.getDate() &&
+                                            currentMonth === currentDate.getMonth() &&
+                                            currentYear === currentDate.getFullYear()
+                                            ? 'current-day'
+                                            : ''
                                     }
-                                    onClick={() => handleDayClick(day + 1)}
-
-                                >{day + 1}</span>
-                            }
-                            )
-                        }
+                                    onClick={() => handleDayClick(day)}
+                                >
+                                    {day}
+                                </span>
+                            );
+                        })}
                     </div>
                 </div>
                 <div className="events">
-
                     {showEventPopup && (
                         <div className="event-popup">
                             <div className="time-input">
                                 <div className="event-popup-time">Start Time</div>
-                                <input type="number" name='hours' min={0} max={24} className='hours'
-                                    value={eventStartAppointment?.getHours()} onChange={handleTimeChange} />
-
-                                <input type="number" name='minutes' min={0} max={60} className='minutes'
-                                    value={eventStartAppointment?.getMinutes()} onChange={handleTimeChange}
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={23}
+                                    className='hours'
+                                    value={eventStartTime.hours}
+                                    onChange={e => handleTimeChange('start', 'hours', e.target.value)}
                                 />
-
-
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={59}
+                                    className='minutes'
+                                    value={eventStartTime.minutes}
+                                    onChange={e => handleTimeChange('start', 'minutes', e.target.value)}
+                                />
                             </div>
                             <div className="time-input">
                                 <div className="event-popup-time">End Time</div>
-                                <input type="number" name='hours' min={0} max={24} className='hours'
-                                    value={eventEndAppointment?.getHours()} onChange={handleTimeChange} />
-
-                                <input type="number" name='minutes' min={0} max={60} className='minutes'
-                                    value={eventEndAppointment?.getHours()} onChange={handleTimeChange}
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={23}
+                                    className='hours'
+                                    value={eventEndTime.hours}
+                                    onChange={e => handleTimeChange('end', 'hours', e.target.value)}
                                 />
-
-
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={59}
+                                    className='minutes'
+                                    value={eventEndTime.minutes}
+                                    onChange={e => handleTimeChange('end', 'minutes', e.target.value)}
+                                />
                             </div>
                             <div className="event-select">
                                 <div className="event-popup-doctor">
                                     <select
-                                        name="doctorID"
                                         value={eventIdDoctor}
-                                        onChange={handleDoctorChange}
+                                        onChange={e => setEventIdDoctor(e.target.value)}
                                         className="border rounded p-2 w-full"
-
                                     >
-                                        {doctors.map((doctor) => (
+                                        {doctors.map(doctor => (
                                             <option key={doctor.ID} value={doctor.ID}>
                                                 {doctor.Name}
                                             </option>
@@ -258,12 +281,11 @@ export const Schedule = () => {
                                 </div>
                                 <div className="event-popup-patient">
                                     <select
-                                        name="SpecialistID"
-                                        value={eventIdDoctor}
-                                        onChange={handleDoctorChange}
+                                        value={eventIdPatient}
+                                        onChange={e => setEventIdPatient(e.target.value)}
                                         className="border rounded p-2 w-full"
                                     >
-                                        {patients.map((patient) => (
+                                        {patients.map(patient => (
                                             <option key={patient.ID} value={patient.ID}>
                                                 {patient.Name}
                                             </option>
@@ -272,43 +294,52 @@ export const Schedule = () => {
                                 </div>
                             </div>
 
-
-                            <textarea placeholder='Enter Event Text (Maximun 60 Characters)'
+                            <textarea
+                                placeholder='Enter Event Text (Maximum 60 Characters)'
                                 value={eventText}
-                                onChange={(e) => {
+                                onChange={e => {
                                     if (e.target.value.length <= 60) {
                                         setEventText(e.target.value);
                                     }
-                                }}></textarea>
+                                }}
+                            />
                             <button className="event-popup-btn" onClick={handleEventSubmit}>
                                 {editingEvent ? "Update Event" : "Add Event"}
                             </button>
                             <button className="close-event-popup" onClick={() => setShowEventPopup(false)}>
                                 <i className="bx bx-x"></i>
                             </button>
-                        </div>)}
-                    {events.map((_event: Event, index: number) => (
-                        <div className="event" key={index}>
+                        </div>
+                    )}
+                    {events.map((event: Event) => (
+                        <div className="event" key={event.Id}>
                             <div className="event-date-wrapper">
-                                <div className="event-date">{`
-                                ${monthsOfYear[_event.date.getMonth()]} 
-                                ${_event.date.getDate()} 
-                                ${_event.date.getFullYear()}`}</div>
-
-                                <div className="event-time">{_event.time}</div>
+                                <div className="event-date">
+                                    {`${monthsOfYear[event.StartAppointment.getMonth()]} 
+                                      ${event.StartAppointment.getDate()}, 
+                                      ${event.StartAppointment.getFullYear()}`}
+                                </div>
+                                <div className="event-time">
+                                    {`${event.StartAppointment.getHours().toString().padStart(2, '0')}:${event.StartAppointment.getMinutes().toString().padStart(2, '0')} - 
+                                      ${event.EndAppointment.getHours().toString().padStart(2, '0')}:${event.EndAppointment.getMinutes().toString().padStart(2, '0')}`}
+                                </div>
+                                {event.StartOriginalDate && (
+                                    <div className='event-reschedule'>
+                                        Rescheduled from: {`${monthsOfYear[event.StartOriginalDate.getMonth()]} 
+                                      ${event.StartOriginalDate.getDate()}, 
+                                      ${event.StartOriginalDate.getFullYear()}`}
+                                    </div>
+                                )}
                             </div>
-                            <div className="event-text">{_event.Text}</div>
+                            <div className="event-text">{event.Text}</div>
                             <div className="event-buttons">
-                                <i className="bx bxs-edit-alt" onClick={() => handleEditEvent(_event)}></i>
-                                <i className="bx bxs-message-alt-x" onClick={() => handleDeleteEvent(_event)}></i>
+                                <i className="bx bxs-edit-alt" onClick={() => handleEditEvent(event)}></i>
+                                <i className="bx bxs-message-alt-x" onClick={() => handleDeleteEvent(event)}></i>
                             </div>
                         </div>
                     ))}
-
                 </div>
             </div>
         </div>
-
-    )
-}
-
+    );
+};
