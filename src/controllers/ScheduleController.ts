@@ -1,10 +1,12 @@
-import { Schedule } from '../models/Schedule';
+import { Schedule, ScheduleDetails } from '../models/Schedule';
 import {
     fetchSchedules,
     createSchedule,
     updateSchedule,
     deleteSchedule,
     fetchScheduleById,
+    fetchShedulesByMonthYear,
+    fetchShedulesByUser
 } from '../services/Schedule';
 
 export class ScheduleController {
@@ -53,6 +55,25 @@ export class ScheduleController {
             console.error(`Failed to delete schedule with ID ${id}:`, error);
             throw new Error('Could not delete schedule.');
         }
+    }
+
+    async getShedulesByMonthYear(month: number, year: number): Promise<Schedule[]>{
+        try {
+            return await fetchShedulesByMonthYear(month, year);
+        } catch (error){
+            console.error(`Failed to fetch schedules by month and year: ${month}/${year}`, error);
+            throw new Error('Could not fetch schedules by month and year.');
+        }
+
+    }
+    async getShedulesByUser(IDUser:string): Promise<ScheduleDetails[]>{
+        try {
+            return await fetchShedulesByUser(IDUser);
+        } catch (error){
+            console.error(`Failed to fetch schedules by month and year: ${IDUser}`, error);
+            throw new Error('Could not fetch schedules by month and year.');
+        }
+
     }
 
 }

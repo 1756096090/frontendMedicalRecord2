@@ -3,20 +3,14 @@ import './Schedule.css';
 import { UserController } from '../../controllers/UserController';
 import { Doctor } from '../../models/UserDoctor';
 import { Patient } from '../../models/Patient';
+import { Schedule } from '../../models/Schedule';
 import { PatientController } from '../../controllers/PatientController';
+import { ScheduleController } from '../../controllers/ScheduleController';
 
-interface Event {
-    Id: number;
-    Date: Date;
-    IdUser: string;
-    IdPatient: string;
-    StartAppointment: Date;
-    EndAppointment: Date;
-    StartOriginalDate: Date | null;
-    Text: string;
-}
 
-export const Schedule = () => {
+
+
+export const ScheduleView = () => {
     const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const monthsOfYear = [
         "January", "February", "March", "April", "May", "June",
@@ -30,19 +24,20 @@ export const Schedule = () => {
     const [currentYear, setCurrentYear] = useState(currentDate.getFullYear());
     const [selectedDate, setSelectedDate] = useState(currentDate);
     const [showEventPopup, setShowEventPopup] = useState(false);
-    const [events, setEvents] = useState<Event[]>([]);
+    const [events, setEvents] = useState<Schedule[]>([]);
     const [eventStartTime, setEventStartTime] = useState({ hours: '00', minutes: '00' });
     const [eventEndTime, setEventEndTime] = useState({ hours: '00', minutes: '00' });
     const [eventIdPatient, setEventIdPatient] = useState("");
     const [eventIdDoctor, setEventIdDoctor] = useState("");
     const [eventText, setEventText] = useState('');
-    const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+    const [editingEvent, setEditingEvent] = useState<Schedule | null>(null);
 
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
     const [userController] = useState(new UserController());
     const [patientController] = useState(new PatientController());
+    const [scheduleController] = useState(new ScheduleController());
 
     const loadDoctors = useCallback(async () => {
         try {
@@ -62,10 +57,28 @@ export const Schedule = () => {
         }
     }, [patientController]);
 
+    const loadEvents = useCallback(async () => {
+        try {
+            const fetchEvents = await scheduleController.getShedulesByMonthYear(currentMonth+1, currentYear)
+            console.log("🚀 ~ loadEvents ~ fetchEvents:", fetchEvents)
+            setEvents(fetchEvents);
+        } catch (error) {
+            console.error("Failed to load events", error);
+        }
+    }, [currentMonth, currentYear, scheduleController])
+
     useEffect(() => {
         loadDoctors();
+    }, [loadDoctors]);
+
+    useEffect(() => {
         loadPatients();
-    }, [loadDoctors, loadPatients]);
+    }, [loadPatients]);
+
+    useEffect(() => {
+        loadEvents();
+    }, [currentMonth, currentYear, loadEvents]);
+
 
     const prevMonth = () => {
         setCurrentMonth(prevMonth => prevMonth === 0 ? 11 : prevMonth - 1);
@@ -76,6 +89,7 @@ export const Schedule = () => {
         setCurrentMonth(prevMonth => prevMonth === 11 ? 0 : prevMonth + 1);
         setCurrentYear(prevYear => currentMonth === 11 ? prevYear + 1 : prevYear);
     };
+    
 
     const handleDayClick = (day: number) => {
         const clickedDate = new Date(currentYear, currentMonth, day);
@@ -122,20 +136,26 @@ export const Schedule = () => {
             return;
         }
 
-        const newEvent: Event = {
-            Id: editingEvent ? editingEvent.Id : Date.now(),
+        const newEvent: Schedule = {
+            ID: editingEvent ? editingEvent.ID : (Date.now()).toString(),
             Date: selectedDate,
-            IdUser: eventIdDoctor,
-            IdPatient: eventIdPatient,
+            IDUser: eventIdDoctor,
+            IDPatient: eventIdPatient,
             StartAppointment: startAppointment,
             EndAppointment: endAppointment,
-            StartOriginalDate: editingEvent?.StartAppointment || null,
+            StartOrignal: editingEvent?.StartAppointment || null,
             Text: eventText,
         };
 
+        if (editingEvent) {
+            scheduleController.editSchedule(newEvent);
+        } else {
+            scheduleController.addSchedule(newEvent);
+        }
+
         setEvents(prevEvents => {
             const updatedEvents = editingEvent
-                ? prevEvents.map(event => event.Id === editingEvent.Id ? newEvent : event)
+                ? prevEvents.map(event => event.ID === editingEvent.ID ? newEvent : event)
                 : [...prevEvents, newEvent];
 
             return updatedEvents.sort((a, b) =>
@@ -150,25 +170,31 @@ export const Schedule = () => {
         setShowEventPopup(false);
     };
 
-    const handleEditEvent = (event: Event) => {
+    const handleEditEvent = (event: Schedule) => {
         setSelectedDate(event.Date);
         setEventStartTime({
-            hours: event.StartAppointment.getHours().toString().padStart(2, '0'),
-            minutes: event.StartAppointment.getMinutes().toString().padStart(2, '0')
+            hours: new Date(event.StartAppointment).getHours().toString().padStart(2, '0'),
+            minutes: new Date(event.StartAppointment).getMinutes().toString().padStart(2, '0')
         });
         setEventEndTime({
-            hours: event.EndAppointment.getHours().toString().padStart(2, '0'),
-            minutes: event.EndAppointment.getMinutes().toString().padStart(2, '0')
+            hours: new Date(event.EndAppointment).getHours().toString().padStart(2, '0'),
+            minutes: new Date(event.EndAppointment).getMinutes().toString().padStart(2, '0')
         });
-        setEventIdDoctor(event.IdUser);
-        setEventIdPatient(event.IdPatient);
+        setEventIdDoctor(event.IDUser);
+        setEventIdPatient(event.IDPatient);
         setEventText(event.Text);
         setEditingEvent(event);
         setShowEventPopup(true);
     };
 
-    const handleDeleteEvent = (event: Event) => {
-        setEvents(prevEvents => prevEvents.filter(e => e.Id !== event.Id));
+    const handleDeleteEvent = (event: Schedule) => {
+        if (!window.confirm("Are you sure you want to delete this event?")) {
+            return;
+        }
+        if(event.ID){
+            scheduleController.removeSchedule(event.ID)
+        }
+        setEvents(prevEvents => prevEvents.filter(e => e.ID !== event.ID));
     };
 
     const handleTimeChange = (timeType: 'start' | 'end', field: 'hours' | 'minutes', value: string) => {
@@ -311,23 +337,23 @@ export const Schedule = () => {
                             </button>
                         </div>
                     )}
-                    {events.map((event: Event) => (
-                        <div className="event" key={event.Id}>
+                    {events && events.map((event: Schedule) => (
+                        <div className="event" key={event.ID}>
                             <div className="event-date-wrapper">
                                 <div className="event-date">
-                                    {`${monthsOfYear[event.StartAppointment.getMonth()]} 
-                                      ${event.StartAppointment.getDate()}, 
-                                      ${event.StartAppointment.getFullYear()}`}
+                                    {`${monthsOfYear[new Date(event.StartAppointment).getMonth()]} 
+                                      ${new Date(event.StartAppointment).getDate()}, 
+                                      ${new Date(event.StartAppointment).getFullYear()}`}
                                 </div>
                                 <div className="event-time">
-                                    {`${event.StartAppointment.getHours().toString().padStart(2, '0')}:${event.StartAppointment.getMinutes().toString().padStart(2, '0')} - 
-                                      ${event.EndAppointment.getHours().toString().padStart(2, '0')}:${event.EndAppointment.getMinutes().toString().padStart(2, '0')}`}
+                                    {`${new Date(event.StartAppointment).getHours().toString().padStart(2, '0')}:${new Date(event.StartAppointment).getMinutes().toString().padStart(2, '0')} - 
+                                      ${new Date(event.EndAppointment).getHours().toString().padStart(2, '0')}:${new Date(event.EndAppointment).getMinutes().toString().padStart(2, '0')}`}
                                 </div>
-                                {event.StartOriginalDate && (
+                                {event.StartOrignal && (
                                     <div className='event-reschedule'>
-                                        Rescheduled from: {`${monthsOfYear[event.StartOriginalDate.getMonth()]} 
-                                      ${event.StartOriginalDate.getDate()}, 
-                                      ${event.StartOriginalDate.getFullYear()}`}
+                                        Rescheduled from: {`${monthsOfYear[new Date(event.StartOrignal).getMonth()]} 
+                                      ${new Date(event.StartOrignal).getDate()}, 
+                                      ${new Date(event.StartOrignal).getFullYear()}`}
                                     </div>
                                 )}
                             </div>

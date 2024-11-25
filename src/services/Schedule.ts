@@ -1,4 +1,4 @@
-import { Schedule } from '../models/Schedule';
+import { Schedule, ScheduleDetails } from '../models/Schedule';
 import config from '../config';
 import { handleResponse } from './handleResponse';
 
@@ -43,3 +43,27 @@ export const deleteSchedule = async (id: string ): Promise<void> => {
     });
     return handleResponse(response);
 };
+
+export const fetchShedulesByMonthYear = async (month: number, year: number): Promise<Schedule[]> =>{
+    const response = await fetch(`${API_URL}/by-month-year`,{
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({month, year})
+
+    })
+    return handleResponse(response)
+}
+
+export const fetchShedulesByUser = async (IDUser: string): Promise<ScheduleDetails[]> =>{
+    const response = await fetch(`${API_URL}/by-user`,{
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({IDUser})
+
+    })
+    return handleResponse(response)
+}

@@ -25,7 +25,7 @@ const Sidebar: React.FC = () => {
                     <h1 className="text-xl font-bold mb-6">Dashboard</h1>
 
                     <ul className="space-y-4">
-                        {handleRoles(["generate_medical_records", "manage_users"]) && (
+                        {handleRoles([ "manage_users"]) && (
                             <li>
                                 <a 
                                     href="/user-management" 
@@ -47,16 +47,6 @@ const Sidebar: React.FC = () => {
                             </li>
                         )}
 
-                        {handleRoles(["generate_medical_records"]) && (
-                            <li>
-                                <a 
-                                    href="/medical-records" 
-                                    className="block text-lg hover:text-gray-300 transition-colors duration-200"
-                                >
-                                    Generar Registros Médicos
-                                </a>
-                            </li>
-                        )}
 
                         {handleRoles(["schedule"]) && (
                             <li>
@@ -68,6 +58,19 @@ const Sidebar: React.FC = () => {
                                 </a>
                             </li>
                         )}
+                        {handleRoles(["generate_medical_records"]) && (
+                            <li>
+                                <a 
+                                    href="/schedule-records"   
+                                    className="block text-lg hover:text-gray-300 transition-colors duration-200"
+                                >
+                                    Agenda Médico
+                                </a>
+                            </li>
+                        )
+                        
+
+                        }
                     </ul>
                 </div>
                 <button

@@ -8,7 +8,8 @@ import SpecialistEdit from './views/UserManagement/Specialist/SpecialistEdit';
 import UserEdit from './views/UserManagement/User/UserEdit';
 import PatientCrud from './views/PatientManagement/Patient/Patient';
 import PatientEdit from './views/PatientManagement/Patient/PatientEdit';
-import { Schedule } from './views/Schedule/Schedule';
+import { ScheduleView } from './views/Schedule/Schedule';
+import { ScheduleDoctor } from './views/ScheduleDoctor/ScheduleDoctor';
 
 const App: React.FC = () => {
   return (
@@ -21,7 +22,8 @@ const App: React.FC = () => {
           <Route path="user/edit/:id" element={<UserEdit />} />
           <Route path="patient-management" element={<PatientCrud />} />
           <Route path='patient/edit/:id' element={<PatientEdit />} />
-          <Route path='schedule' element={<Schedule/>} />
+          <Route path='schedule' element={<ScheduleView/>} />
+          <Route path='schedule-records' element={<ScheduleDoctor/>} />
         </Route>
       </Routes>
     </Router>
