@@ -16,11 +16,12 @@ export const ScheduleDoctor = () => {
     const loadSchedule = useCallback(async () =>{
         try {
             const id = localStorage.getItem('id')
+            
             if (!id) {
                 console.error('User ID not found in local storage');
                 return;
             }
-            const fetchedSchedules = await scheduleController.getShedulesByUser(id);
+            const fetchedSchedules = await scheduleController.getShedulesByUser(JSON.parse(id));
             setSchedules(fetchedSchedules);
         }
         catch (error) {

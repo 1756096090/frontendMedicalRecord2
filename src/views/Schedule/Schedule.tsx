@@ -146,12 +146,17 @@ export const ScheduleView = () => {
             StartOrignal: editingEvent?.StartAppointment || null,
             Text: eventText,
         };
-
-        if (editingEvent) {
-            scheduleController.editSchedule(newEvent);
-        } else {
-            scheduleController.addSchedule(newEvent);
+        try{
+            if (editingEvent) {
+                scheduleController.editSchedule(newEvent);
+            } else {
+                scheduleController.addSchedule(newEvent);
+            }
         }
+        catch (error) {
+            console.error("Failed to save event", error);
+        }
+
 
         setEvents(prevEvents => {
             const updatedEvents = editingEvent

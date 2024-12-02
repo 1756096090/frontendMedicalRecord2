@@ -26,7 +26,7 @@ const SheduleDoctorList: React.FC<SheduleDoctorListProps> = ({ schedules, onEdit
             <h2 className="text-3xl font-semibold mb-6 text-center text-gray-800">Doctor Schedules</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {schedules.map((schedule: ScheduleDetails) => (
+                { schedules && schedules.map((schedule: ScheduleDetails) => (
                     <div key={schedule.ID} className="bg-white rounded-lg shadow-lg p-6 hover:scale-105 hover:shadow-2xl">
                         <h3 className="text-xl font-semibold text-gray-700 mb-3">Doctor: {schedule.User?.Name || 'No Name Available'}</h3>
                         <h4 className="text-md text-gray-600 mb-2">Start Date: {formatDate(schedule.StartAppointment)}</h4>

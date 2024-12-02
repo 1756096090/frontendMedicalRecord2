@@ -14,7 +14,7 @@ export interface ProcedureDetails {
     IDCreator: string;
     IDUpdater: string;
     Description: string;
-    StartAt: Date | null;
-    EndAt: Date | null;
+    StartAt: Date | null | string;
+    EndAt: Date | null | string;
     IsCompleted: boolean;
 }

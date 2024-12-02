@@ -38,6 +38,7 @@ const PatientEdit: React.FC = () => {
     const [idDiagnosis, setIdDiagnosis] = useState<string>("");
     const [idSubDiagnosis, setIdSubDiagnosis] = useState<string>("")
     const [diagnosisProcedures, setDiagnosticProcedures] = useState<DiagnosisProcedure[]>([]);
+    const [modifiedDiagnosisProcedures, setModifiedDiagnosisProcedures] = useState<Set<string>>(new Set());
 
     const diagnosisProcedureController = new DiagnosisProcedureController();
     const procedureController = new ProcedureController()
@@ -140,8 +141,10 @@ const PatientEdit: React.FC = () => {
             const savedDiagnosisProcedure = await diagnosisProcedureController.addDiagnosisProcedure(diagnosisProcedureSave);
 
             if (savedDiagnosisProcedure) {
+                console.log("🚀 ~ handleSaveDiagnostic ~ savedDiagnosisProcedure:", savedDiagnosisProcedure)
                 diagnosisProcedureSave.ID = savedDiagnosisProcedure; // Use the returned ID from the save operation
                 setDiagnosticProcedures([...diagnosisProcedures, diagnosisProcedureSave]);
+                
             }
         }
     }
@@ -171,35 +174,49 @@ const PatientEdit: React.FC = () => {
         };
 
         try {
+            const savePromises = diagnosisProcedures
+                .filter(diagProc => diagProc.ID && modifiedDiagnosisProcedures.has(diagProc.ID))
+                .map(async diagProc => await diagnosisProcedureController.editDiagnosisProcedure(diagProc));
+
             if (id !== 'new') {
                 await controller.editPatient(patient);
             } else {
                 await controller.addPatient(patient);
             }
+
+
+            await Promise.all(savePromises);
+
             navigate('/patient-management');
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             errors.push(error.message as string);
             setErrors(errors);
-            console.error("Failed to save patient", error);
+            console.error("Failed to save patient or diagnosis procedures", error);
         }
     };
+
 
     const handleProcedureChange = (
         e: React.ChangeEvent<HTMLInputElement>,
         diagnosisIndex: number,
         procedureIndex: number,
-        field: keyof ProcedureDetails 
+        field: keyof ProcedureDetails
     ) => {
         const updatedDiagnosisProcedures = [...diagnosisProcedures];
+        const currentDiagnosis = updatedDiagnosisProcedures[diagnosisIndex];
 
         if (field === 'StartAt' || field === 'EndAt') {
-            updatedDiagnosisProcedures[diagnosisIndex].Procedures[procedureIndex][field] =
-                e.target.value ? new Date(e.target.value) : null; // Convertir el string a Date
+            currentDiagnosis.Procedures[procedureIndex][field] =
+                e.target.value ? new Date(e.target.value) : null;
         } else if (field === 'IsCompleted') {
-            updatedDiagnosisProcedures[diagnosisIndex].Procedures[procedureIndex][field] = e.target.checked;
+            currentDiagnosis.Procedures[procedureIndex][field] = e.target.checked;
         } else {
-            updatedDiagnosisProcedures[diagnosisIndex].Procedures[procedureIndex][field] = e.target.value;
+            currentDiagnosis.Procedures[procedureIndex][field] = e.target.value;
+        }
+
+        if (currentDiagnosis.ID) {
+            setModifiedDiagnosisProcedures(prev => new Set(prev).add(currentDiagnosis.ID!));
         }
 
         setDiagnosticProcedures(updatedDiagnosisProcedures);
@@ -212,10 +229,17 @@ const PatientEdit: React.FC = () => {
         procedureIndex: number,
     ) => {
         const updatedDiagnosisProcedures = [...diagnosisProcedures];
-        updatedDiagnosisProcedures[diagnosisIndex].Procedures[procedureIndex].IDProcedure = e.target.value ;
+        const currentDiagnosis = updatedDiagnosisProcedures[diagnosisIndex];
+
+        currentDiagnosis.Procedures[procedureIndex].IDProcedure = e.target.value;
+
+        if (currentDiagnosis.ID) {
+            setModifiedDiagnosisProcedures(prev => new Set(prev).add(currentDiagnosis.ID!));
+        }
+
         setDiagnosticProcedures(updatedDiagnosisProcedures);
     };
-    
+
 
     const handleAddProcedure = (diagnosisIndex: number) => {
         const updatedDiagnosisProcedures = [...diagnosisProcedures];
@@ -501,11 +525,11 @@ const PatientEdit: React.FC = () => {
                                                 >
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <div>
-                                                            
+
                                                             <select
                                                                 name="Procedimiento"
                                                                 value={procedure.IDProcedure}
-                                                                onChange={ (e) => handleProcedureSelectChange(e, index, procedureIndex)}
+                                                                onChange={(e) => handleProcedureSelectChange(e, index, procedureIndex)}
                                                                 className="border rounded p-2 w-full"
                                                             >
                                                                 <option value="">Seleccionar Diagnóstico</option>
@@ -531,13 +555,20 @@ const PatientEdit: React.FC = () => {
                                                         </div>
                                                     </div>
 
-                                                    { <div className="grid grid-cols-2 gap-4 mt-4">
+
+                                                    {procedures.find((pro)=>pro.ID == diagnosisProcedures[index].Procedures[procedureIndex].IDProcedure)?.IsTimeType &&  <div className="grid grid-cols-2 gap-4 mt-4">
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                                 Fecha de Inicio
                                                                 <input
                                                                     type="datetime-local"
-                                                                    value={procedure.StartAt ? procedure.StartAt.toISOString().slice(0, 16) : ''}
+                                                                    value={
+                                                                        typeof procedure.StartAt === 'string'
+                                                                            ? procedure.StartAt.slice(0, 16)
+                                                                            : procedure.StartAt instanceof Date
+                                                                                ? procedure.StartAt.toISOString().slice(0, 16)
+                                                                                : ''
+                                                                    }
                                                                     onChange={(e) => handleProcedureChange(e, index, procedureIndex, 'StartAt')}
                                                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200"
                                                                 />
@@ -548,15 +579,22 @@ const PatientEdit: React.FC = () => {
                                                                 Fecha de Fin
                                                                 <input
                                                                     type="datetime-local"
-                                                                    value={procedure.EndAt ? procedure.EndAt.toISOString().slice(0, 16) : ''}
+                                                                    value={
+                                                                        typeof procedure.EndAt === 'string'
+                                                                            ? procedure.EndAt.slice(0, 16)
+                                                                            : procedure.EndAt instanceof Date
+                                                                                ? procedure.EndAt.toISOString().slice(0, 16)
+                                                                                : ''
+                                                                    }
                                                                     onChange={(e) => handleProcedureChange(e, index, procedureIndex, 'EndAt')}
                                                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200"
                                                                 />
                                                             </label>
                                                         </div>
+
                                                     </div>}
 
-                                                    <div className="mt-4">
+                                                    {!procedures.find((pro)=>pro.ID == diagnosisProcedures[index].Procedures[procedureIndex].IDProcedure)?.IsTimeType &&<div className="mt-4">
                                                         <label className="inline-flex items-center">
                                                             <input
                                                                 type="checkbox"
@@ -566,10 +604,12 @@ const PatientEdit: React.FC = () => {
                                                             />
                                                             <span className="ml-2 text-sm text-gray-700">Completado</span>
                                                         </label>
-                                                    </div>
+                                                    </div>}
                                                 </div>
                                             ))}
+
                                         </div>
+
                                     ) : (
                                         <p className="text-gray-500 italic">No hay procedimientos registrados.</p>
                                     )}
@@ -587,8 +627,6 @@ const PatientEdit: React.FC = () => {
                         ))}
                     </div>
                 </div>
-
-
 
 
 

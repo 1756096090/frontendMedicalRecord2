@@ -62,7 +62,7 @@ export const fetchShedulesByUser = async (IDUser: string): Promise<ScheduleDetai
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({IDUser})
+        body: JSON.stringify({IDUser: IDUser}) 
 
     })
     return handleResponse(response)
