@@ -7,6 +7,7 @@ import { Diagnosis } from '../../../models/Diagnosis';
 import { DiagnosisProcedureController } from '../../../controllers/DiagnosisProcedureController';
 import { ProcedureController } from '../../../controllers/ProcedureController';
 import { Procedure } from '../../../models/Procedure';
+import { ReportCore } from '../../../models/ReportCore';
 
 const PatientEdit: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -25,6 +26,9 @@ const PatientEdit: React.FC = () => {
     const [responsible, setResponsible] = useState('');
     const [others, setOthers] = useState('');
 
+    const [report, setReport] = useState<ReportCore | null>(null);
+
+
     const [hasInsurance, setHasInsurance] = useState(false);
     const [hasHeartDisease, setHasHeartDisease] = useState(false);
     const [hasBloodPressure, setHasBloodPressure] = useState(false);
@@ -42,6 +46,7 @@ const PatientEdit: React.FC = () => {
 
     const diagnosisProcedureController = new DiagnosisProcedureController();
     const procedureController = new ProcedureController()
+
 
 
     const [errors, setErrors] = useState<string[]>([]);
@@ -94,6 +99,11 @@ const PatientEdit: React.FC = () => {
         }
     }, [id, controller]);
 
+    const getReport = async (IDProcedure: string, IDPatient: string): Promise<ReportCore> => {
+        const dataReport = await diagnosisProcedureController.ReportCore(IDProcedure, IDPatient);
+        return dataReport;
+    }
+
 
     const validateForm = (): boolean => {
         const validationErrors: string[] = [];
@@ -143,8 +153,14 @@ const PatientEdit: React.FC = () => {
             if (savedDiagnosisProcedure) {
                 console.log("🚀 ~ handleSaveDiagnostic ~ savedDiagnosisProcedure:", savedDiagnosisProcedure)
                 diagnosisProcedureSave.ID = savedDiagnosisProcedure; // Use the returned ID from the save operation
-                setDiagnosticProcedures([...diagnosisProcedures, diagnosisProcedureSave]);
-                
+                if (savedDiagnosisProcedure) {
+
+                    diagnosisProcedureSave.ID = savedDiagnosisProcedure;
+
+                    setDiagnosticProcedures(prevProcedures => [...prevProcedures, diagnosisProcedureSave]);
+                }
+
+
             }
         }
     }
@@ -223,7 +239,7 @@ const PatientEdit: React.FC = () => {
     };
 
 
-    const handleProcedureSelectChange = (
+    const handleProcedureSelectChange = async (
         e: React.ChangeEvent<HTMLSelectElement>,
         diagnosisIndex: number,
         procedureIndex: number,
@@ -236,7 +252,11 @@ const PatientEdit: React.FC = () => {
         if (currentDiagnosis.ID) {
             setModifiedDiagnosisProcedures(prev => new Set(prev).add(currentDiagnosis.ID!));
         }
-
+        if(id){
+            
+            const data = await getReport(e.target.value, id)
+            setReport(data)
+        }
         setDiagnosticProcedures(updatedDiagnosisProcedures);
     };
 
@@ -488,6 +508,63 @@ const PatientEdit: React.FC = () => {
 
                 </div>
 
+                <div>
+                    {report && (
+                        <div>
+                            <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: '20px' }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'left' }}>Descripción</th>
+                                        <th style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'left' }}>Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>Código más común</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>{report.CodeUnderDiagnosis}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>Tiempo Promedio</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>{report.AverageProcedureTime}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>Cumplimiento de citas del paciente</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>{report.AverageAppointmen}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>Promedio de género</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>{report.AveragePatientGender}% hombres</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>Promedio de edad</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>{report.AveragePatientAge}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>Total de procedimientos</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>{report.TotalProcedureCount}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>Promedio de tratamientos exitosos</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>{report.SuccessfulTreatments}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <h3>El/Los paciente/s más comunes son:</h3>
+                            {report?.SimilarPatients?.map((patient, index) => (
+                                <div key={index} style={{ marginBottom: '10px' }}>
+                                    <p>
+                                        El paciente con género {patient.Patient.Gender ===true ? 'Masculino' : 'Femenino'}, nacido el{' '}
+                                        {patient.Patient.BirthDate.toString()}.
+                                    </p>
+                                    <p>El procedimiento fue {patient.IsSuccessful ? 'exitoso' : 'fracasado'}.</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                </div>
+
                 <div className="p-6 bg-gray-50 min-h-screen">
                     <div className="max-w-4xl mx-auto space-y-6">
                         {diagnosisProcedures && diagnosisProcedures.map((d, index) => (
@@ -526,6 +603,7 @@ const PatientEdit: React.FC = () => {
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <div>
 
+
                                                             <select
                                                                 name="Procedimiento"
                                                                 value={procedure.IDProcedure}
@@ -556,7 +634,7 @@ const PatientEdit: React.FC = () => {
                                                     </div>
 
 
-                                                    {procedures.find((pro)=>pro.ID == diagnosisProcedures[index].Procedures[procedureIndex].IDProcedure)?.IsTimeType &&  <div className="grid grid-cols-2 gap-4 mt-4">
+                                                    {procedures.find((pro) => pro.ID == diagnosisProcedures[index].Procedures[procedureIndex].IDProcedure)?.IsTimeType && <div className="grid grid-cols-2 gap-4 mt-4">
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                                 Fecha de Inicio
@@ -594,7 +672,7 @@ const PatientEdit: React.FC = () => {
 
                                                     </div>}
 
-                                                    {!procedures.find((pro)=>pro.ID == diagnosisProcedures[index].Procedures[procedureIndex].IDProcedure)?.IsTimeType &&<div className="mt-4">
+                                                    {!procedures.find((pro) => pro.ID == diagnosisProcedures[index].Procedures[procedureIndex].IDProcedure)?.IsTimeType && <div className="mt-4">
                                                         <label className="inline-flex items-center">
                                                             <input
                                                                 type="checkbox"

@@ -1,6 +1,7 @@
 import { DiagnosisProcedure } from '../models/DiagnosisProcedure';
 import config from '../config';
 import { handleResponse } from './handleResponse';
+import { ReportCore } from '../models/ReportCore';
 
 const API_URL = `${config.API_BASE_URL}/diagnosisProcedure`;
 
@@ -59,6 +60,18 @@ export const updateDiagnosisProcedure = async (diagnosisProcedure: DiagnosisProc
 export const deleteDiagnosisProcedure = async (id: string ): Promise<void> => {
     const response = await fetch(`${API_URL}/${id}`, {
         method: 'DELETE',
+    });
+    return handleResponse(response);
+};
+
+
+export const generateCoreReport = async (IDProcedure: string, IDPatient: string ): Promise<ReportCore> => {
+    const response = await fetch(`${API_URL}/report`, {
+        method: 'post',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({IDPatient, IDProcedure}),
     });
     return handleResponse(response);
 };

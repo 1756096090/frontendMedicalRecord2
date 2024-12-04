@@ -1,12 +1,14 @@
 import { DiagnosisProcedure } from '../models/DiagnosisProcedure';
+import { ReportCore } from '../models/ReportCore';
 import {
     fetchDiagnosisProcedures,
     createDiagnosisProcedure,
     updateDiagnosisProcedure,
     deleteDiagnosisProcedure,
     fetchDiagnosisProcedureById,
-    fetchDiagnosisProcedureByPatient
-} from '../services/diagnosisProcedure';
+    fetchDiagnosisProcedureByPatient,
+    generateCoreReport
+} from '../services/DiagnosisProcedure';
 
 export class DiagnosisProcedureController {
     async getDiagnosisProcedures(): Promise<DiagnosisProcedure[]> {
@@ -70,6 +72,16 @@ export class DiagnosisProcedureController {
             console.error(`Failed to delete diagnosisProcedure with ID ${id}:`, error);
             throw new Error('Could not delete diagnosisProcedure.');
         }
+    }
+
+    async ReportCore(IDProcedure: string, IDPatient: string): Promise<ReportCore> {
+        try{
+            return await generateCoreReport(IDProcedure, IDPatient)
+        }catch(error) {
+            console.error(`Failed to delete diagnosisProcedure with ID ${IDProcedure}:`, error);
+            throw new Error('Could not delete diagnosisProcedure.');
+        }
+
     }
 
 }

@@ -7,7 +7,7 @@ export interface Schedule {
     IDPatient: string;
     StartAppointment: Date;
     EndAppointment: Date;
-    StartOrignal: Date  | null;
+    StartOriginal: Date  | null;
     Text: string;
 }
 

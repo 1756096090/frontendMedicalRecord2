@@ -11,13 +11,14 @@ const PatientListView: React.FC<PatientListViewProps> = ({ patients, onEdit }) =
         return new Date(date).toLocaleDateString();
     };
 
-
-
     return (
-        <div className="overflow-x-auto">
+        <div 
+            className="overflow-x-auto max-h-[30rem] overflow-y-auto border border-gray-200 rounded-md"
+        >
             <table className="min-w-full border-collapse border border-gray-200">
                 <thead>
                     <tr>
+                        <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Acciones</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Nombre</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Fecha de Nacimiento</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Género</th>
@@ -28,12 +29,19 @@ const PatientListView: React.FC<PatientListViewProps> = ({ patients, onEdit }) =
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Ocupación</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Responsable</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Condiciones Médicas</th>
-                        <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {patients.map((patient) => (
                         <tr key={patient.ID} className="hover:bg-gray-50">
+                            <td className="border border-gray-200 p-2">
+                                <button
+                                    onClick={() => onEdit(patient.ID)}
+                                    className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-400 transition-colors"
+                                >
+                                    Editar
+                                </button>
+                            </td>
                             <td className="border border-gray-200 p-2">{patient.Name}</td>
                             <td className="border border-gray-200 p-2">{formatDate(patient.BirthDate)}</td>
                             <td className="border border-gray-200 p-2">{patient.Gender ? 'Masculino' : 'Femenino'}</td>
@@ -56,14 +64,7 @@ const PatientListView: React.FC<PatientListViewProps> = ({ patients, onEdit }) =
                                     {patient.Others && <div>• Otros: {patient.Others}</div>}
                                 </div>
                             </td>
-                            <td className="border border-gray-200 p-2">
-                                <button
-                                    onClick={() => onEdit(patient.ID)}
-                                    className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-400 transition-colors"
-                                >
-                                    Editar
-                                </button>
-                            </td>
+                            
                         </tr>
                     ))}
                 </tbody>

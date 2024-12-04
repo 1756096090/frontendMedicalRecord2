@@ -20,6 +20,7 @@ export const ScheduleView = () => {
     const currentDate = new Date();
     const [doctors, setDoctors] = useState<Doctor[]>([]);
     const [patients, setPatients] = useState<Patient[]>([]);
+    const [dateEdit, setDateEdit] = useState<Date | null>(null)
     const [currentMonth, setCurrentMonth] = useState(currentDate.getMonth());
     const [currentYear, setCurrentYear] = useState(currentDate.getFullYear());
     const [selectedDate, setSelectedDate] = useState(currentDate);
@@ -59,7 +60,7 @@ export const ScheduleView = () => {
 
     const loadEvents = useCallback(async () => {
         try {
-            const fetchEvents = await scheduleController.getShedulesByMonthYear(currentMonth+1, currentYear)
+            const fetchEvents = await scheduleController.getShedulesByMonthYear(currentMonth + 1, currentYear)
             console.log("🚀 ~ loadEvents ~ fetchEvents:", fetchEvents)
             setEvents(fetchEvents);
         } catch (error) {
@@ -89,7 +90,7 @@ export const ScheduleView = () => {
         setCurrentMonth(prevMonth => prevMonth === 11 ? 0 : prevMonth + 1);
         setCurrentYear(prevYear => currentMonth === 11 ? prevYear + 1 : prevYear);
     };
-    
+
 
     const handleDayClick = (day: number) => {
         const clickedDate = new Date(currentYear, currentMonth, day);
@@ -128,8 +129,19 @@ export const ScheduleView = () => {
     };
 
     const handleEventSubmit = () => {
-        const startAppointment = createDateFromTimeInputs(selectedDate, eventStartTime);
-        const endAppointment = createDateFromTimeInputs(selectedDate, eventEndTime);
+        let startAppointment
+        let endAppointment
+        if(editingEvent && dateEdit){
+
+                startAppointment = createDateFromTimeInputs(dateEdit, eventStartTime);
+                endAppointment = createDateFromTimeInputs(dateEdit, eventEndTime);
+            
+        }else{
+            startAppointment = createDateFromTimeInputs(selectedDate, eventStartTime);
+            endAppointment = createDateFromTimeInputs(selectedDate, eventEndTime);
+        }
+
+
 
         if (startAppointment >= endAppointment) {
             alert("End time must be after start time");
@@ -143,10 +155,10 @@ export const ScheduleView = () => {
             IDPatient: eventIdPatient,
             StartAppointment: startAppointment,
             EndAppointment: endAppointment,
-            StartOrignal: editingEvent?.StartAppointment || null,
+            StartOriginal: editingEvent?.StartAppointment || null,
             Text: eventText,
         };
-        try{
+        try {
             if (editingEvent) {
                 scheduleController.editSchedule(newEvent);
             } else {
@@ -163,9 +175,11 @@ export const ScheduleView = () => {
                 ? prevEvents.map(event => event.ID === editingEvent.ID ? newEvent : event)
                 : [...prevEvents, newEvent];
 
-            return updatedEvents.sort((a, b) =>
-                a.StartAppointment.getTime() - b.StartAppointment.getTime()
-            );
+            return updatedEvents.sort((a, b) => {
+                const dateA = new Date(a.StartAppointment);
+                const dateB = new Date(b.StartAppointment);
+                return dateA.getTime() - dateB.getTime();
+            });
         });
 
         setEditingEvent(null);
@@ -176,7 +190,13 @@ export const ScheduleView = () => {
     };
 
     const handleEditEvent = (event: Schedule) => {
-        setSelectedDate(event.Date);
+        const startAppointment =
+            typeof event.StartAppointment === "string"
+                ? new Date(event.StartAppointment)
+                : event.StartAppointment;
+
+        setSelectedDate(startAppointment);
+        setDateEdit(startAppointment);
         setEventStartTime({
             hours: new Date(event.StartAppointment).getHours().toString().padStart(2, '0'),
             minutes: new Date(event.StartAppointment).getMinutes().toString().padStart(2, '0')
@@ -196,7 +216,7 @@ export const ScheduleView = () => {
         if (!window.confirm("Are you sure you want to delete this event?")) {
             return;
         }
-        if(event.ID){
+        if (event.ID) {
             scheduleController.removeSchedule(event.ID)
         }
         setEvents(prevEvents => prevEvents.filter(e => e.ID !== event.ID));
@@ -212,6 +232,35 @@ export const ScheduleView = () => {
             [field]: Math.min(Math.max(0, numValue), maxValue).toString().padStart(2, '0')
         }));
     };
+
+    const handleDaysEdit = (type: "day" | "month" | "year", value: string) => {
+        const numValue = parseInt(value);
+
+        if (isNaN(numValue)) return;
+
+        setDateEdit((prevDate: Date | null) => {
+            const currentDate = prevDate ?? new Date();
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const day = currentDate.getDate();
+
+            switch (type) {
+                case "day":
+                    return new Date(year, month, numValue);
+                case "month": {
+                    // Ensure the new day is valid for the new month
+                    const lastDayOfNewMonth = new Date(year, numValue + 1, 0).getDate();
+                    const newDay = Math.min(day, lastDayOfNewMonth);
+                    return new Date(year, numValue, newDay);
+                }
+                case "year":
+                    return new Date(numValue, month, day);
+                default:
+                    return currentDate;
+            }
+        });
+    };
+
 
     return (
         <div className='container'>
@@ -278,6 +327,38 @@ export const ScheduleView = () => {
                                 />
                             </div>
                             <div className="time-input">
+                                {
+                                    editingEvent &&
+                                    <div>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={31}
+                                            className="day-input"
+                                            value={dateEdit ? dateEdit?.getDate() : ""}
+                                            onChange={(e) => handleDaysEdit("day", e.target.value)}
+                                        />
+
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            max={11}
+                                            className="month-input"
+                                            value={dateEdit ? dateEdit?.getMonth()+1 : ""}
+                                            onChange={(e) => handleDaysEdit("month", e.target.value)}
+                                        />
+
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            className="year-input"
+                                            value={dateEdit ? dateEdit?.getFullYear() : ""}
+                                            onChange={(e) => handleDaysEdit("year", e.target.value)}
+                                        />
+                                    </div>
+
+
+                                }
                                 <div className="event-popup-time">End Time</div>
                                 <input
                                     type="number"
@@ -354,11 +435,11 @@ export const ScheduleView = () => {
                                     {`${new Date(event.StartAppointment).getHours().toString().padStart(2, '0')}:${new Date(event.StartAppointment).getMinutes().toString().padStart(2, '0')} - 
                                       ${new Date(event.EndAppointment).getHours().toString().padStart(2, '0')}:${new Date(event.EndAppointment).getMinutes().toString().padStart(2, '0')}`}
                                 </div>
-                                {event.StartOrignal && (
+                                {event.StartOriginal && (
                                     <div className='event-reschedule'>
-                                        Rescheduled from: {`${monthsOfYear[new Date(event.StartOrignal).getMonth()]} 
-                                      ${new Date(event.StartOrignal).getDate()}, 
-                                      ${new Date(event.StartOrignal).getFullYear()}`}
+                                        Rescheduled from: {`${monthsOfYear[new Date(event.StartOriginal).getMonth()]} 
+                                      ${new Date(event.StartOriginal).getDate()}, 
+                                      ${new Date(event.StartOriginal).getFullYear()}`}
                                     </div>
                                 )}
                             </div>

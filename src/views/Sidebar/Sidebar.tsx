@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Sidebar: React.FC = () => {
     const navigate = useNavigate();
+    const [roles, setRoles] = React.useState<string[]>([]);
 
     const handleLogout = () => {
         // Remove the token from localStorage
@@ -11,12 +12,22 @@ const Sidebar: React.FC = () => {
         navigate('/');
     };
 
+
+    useEffect(() => {
+        try {
+            const storedRoles = JSON.parse(localStorage.getItem('role') || '[]');
+            setRoles(storedRoles);
+        } catch (error) {
+            console.error("Error parsing roles:", error);
+            setRoles([]);
+        }
+    }, []);
+    
     const handleRoles = (arr: string[]): boolean => {
-        const roles = JSON.parse(localStorage.getItem('role') || '[]');
-        console.log("🚀 ~ handleRoles ~ arr:", arr,roles)
-        
         return arr.some(role => roles.includes(role));
     };
+    
+
 
     return (
         <aside className="bg-gray-800 text-white h-full p-4">
