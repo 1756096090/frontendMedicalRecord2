@@ -87,6 +87,7 @@ export const ScheduleView = () => {
     };
 
     const nextMonth = () => {
+        console.log('enter next month');
         setCurrentMonth(prevMonth => prevMonth === 11 ? 0 : prevMonth + 1);
         setCurrentYear(prevYear => currentMonth === 11 ? prevYear + 1 : prevYear);
     };

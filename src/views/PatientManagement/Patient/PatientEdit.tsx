@@ -145,25 +145,36 @@ const PatientEdit: React.FC = () => {
                 IDPatient: id,
                 CodeDiagnosis: idDiagnosis,
                 CodeUnderDiagnosis: idSubDiagnosis,
-                Procedures: []
-            }
-
+                Procedures: [],
+                ID: ''
+            };
+    
             const savedDiagnosisProcedure = await diagnosisProcedureController.addDiagnosisProcedure(diagnosisProcedureSave);
-
+    
             if (savedDiagnosisProcedure) {
-                console.log("🚀 ~ handleSaveDiagnostic ~ savedDiagnosisProcedure:", savedDiagnosisProcedure)
+                console.log("🚀 ~ handleSaveDiagnostic ~ savedDiagnosisProcedure:", savedDiagnosisProcedure);
+    
                 diagnosisProcedureSave.ID = savedDiagnosisProcedure; // Use the returned ID from the save operation
-                if (savedDiagnosisProcedure) {
-
-                    diagnosisProcedureSave.ID = savedDiagnosisProcedure;
-
-                    setDiagnosticProcedures(prevProcedures => [...prevProcedures, diagnosisProcedureSave]);
-                }
-
-
+    
+                setDiagnosticProcedures(prevProcedures => [
+                    ...(Array.isArray(prevProcedures) ? prevProcedures : []), // Ensure it's an array
+                    diagnosisProcedureSave,
+                ]);
             }
         }
+    };
+
+    const deleteDiagnosis=(indexRemove: number, id: string )=> {
+        setDiagnosticProcedures(prevProcedures => prevProcedures.filter((_, index) => index!== indexRemove));
+  
+        diagnosisProcedureController.removeDiagnosisProcedure(id ).then(() => {
+            console.log("��� ~ deleteDiagnosis ~ deleted:", id);
+        }).catch((error) => {
+            console.error("Failed to delete diagnosis:", error);
+        });
     }
+
+
     const handleSave = async () => {
         if (!validateForm()) return;
 
@@ -278,6 +289,8 @@ const PatientEdit: React.FC = () => {
         updatedDiagnosisProcedures[diagnosisIndex].Procedures.push(newProcedure);
         setDiagnosticProcedures(updatedDiagnosisProcedures);
     };
+
+    
 
 
 
@@ -565,7 +578,7 @@ const PatientEdit: React.FC = () => {
 
                 </div>
 
-                <div className="p-6 bg-gray-50 min-h-screen">
+                <div className="p-6 bg-gray-50 ">
                     <div className="max-w-4xl mx-auto space-y-6">
                         {diagnosisProcedures && diagnosisProcedures.map((d, index) => (
                             <div
@@ -699,7 +712,14 @@ const PatientEdit: React.FC = () => {
                                         className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out"
                                     >
                                         Añadir Procedimiento
-                                    </button>
+                                    </button>{
+                                        d.ID && typeof d.ID == 'string' ? <button 
+                                        onClick={()=>deleteDiagnosis(index, d.ID)}>
+                                            Eliminar Diagnóstico
+                                        </button>: ""
+
+                                    }
+                                    
                                 </div>
                             </div>
                         ))}

@@ -38,6 +38,7 @@ const Login: React.FC = () => {
                 <h1 className='font-bold text-center mb-5 text-gray-800 border-b border-gray-300'>Login</h1>
                 <p>Ingrese las credenciales para acceder al sitio</p>
                 {error && <p className='text-red-500'>{error}</p>}
+                <div className='flex flex-col'>
                 <input
                     type="text"
                     placeholder="Usuario"
@@ -55,6 +56,8 @@ const Login: React.FC = () => {
                 <button type="submit" className='bg-blue-500 text-white p-2 rounded hover:bg-blue-600'>
                     Login
                 </button>
+                </div>
+                
             </form>
         </div>
     );

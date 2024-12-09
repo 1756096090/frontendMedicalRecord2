@@ -13,7 +13,7 @@ const PatientListView: React.FC<PatientListViewProps> = ({ patients, onEdit }) =
 
     return (
         <div 
-            className="overflow-x-auto max-h-[30rem] overflow-y-auto border border-gray-200 rounded-md"
+            className="overflow-x-auto  overflow-y-auto border border-gray-200 rounded-md"
         >
             <table className="min-w-full border-collapse border border-gray-200">
                 <thead>
@@ -28,7 +28,7 @@ const PatientListView: React.FC<PatientListViewProps> = ({ patients, onEdit }) =
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Teléfono</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Ocupación</th>
                         <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Responsable</th>
-                        <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Condiciones Médicas</th>
+                        {/* <th className="border border-gray-200 p-2 bg-gray-50" scope="col">Condiciones Médicas</th> */}
                     </tr>
                 </thead>
                 <tbody>
@@ -51,7 +51,7 @@ const PatientListView: React.FC<PatientListViewProps> = ({ patients, onEdit }) =
                             <td className="border border-gray-200 p-2">{patient.Phone}</td>
                             <td className="border border-gray-200 p-2">{patient.Occupation}</td>
                             <td className="border border-gray-200 p-2">{patient.Responsible}</td>
-                            <td className="border border-gray-200 p-2">
+                            {/* <td className="border border-gray-200 p-2">
                                 <div className="text-sm">
                                     {patient.HasInsurance && <div>• Seguro Médico</div>}
                                     {patient.HasHeartDisease && <div>• Enfermedad Cardíaca</div>}
@@ -63,7 +63,7 @@ const PatientListView: React.FC<PatientListViewProps> = ({ patients, onEdit }) =
                                     {patient.HasNeurologicalDisorders && <div>• Trastornos Neurológicos</div>}
                                     {patient.Others && <div>• Otros: {patient.Others}</div>}
                                 </div>
-                            </td>
+                            </td> */}
                             
                         </tr>
                     ))}

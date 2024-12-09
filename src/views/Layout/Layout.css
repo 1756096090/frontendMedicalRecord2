@@ -1,0 +1,18 @@
+.btn-toggle{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: transparent;
+    font-size: 2rem;
+    
+    color: white ;
+    border: none;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 1px;
+}
+
+.icon-minus{
+    right: 15px;
+    top: 5px;    
+}

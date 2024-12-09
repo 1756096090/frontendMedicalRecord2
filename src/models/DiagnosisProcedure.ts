@@ -1,7 +1,7 @@
 
 
 export interface DiagnosisProcedure {
-    ID?: string;
+    ID: string;
     IDPatient: string;
     CodeDiagnosis: string;
     CodeUnderDiagnosis: string;

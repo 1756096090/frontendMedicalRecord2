@@ -1,0 +1,9 @@
+.module{
+    display: flex;
+    align-items: center;
+    
+    a{
+        font-size: 1rem;
+    }
+}
+
