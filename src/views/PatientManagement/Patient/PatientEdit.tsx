@@ -148,14 +148,14 @@ const PatientEdit: React.FC = () => {
                 Procedures: [],
                 ID: ''
             };
-    
+
             const savedDiagnosisProcedure = await diagnosisProcedureController.addDiagnosisProcedure(diagnosisProcedureSave);
-    
+
             if (savedDiagnosisProcedure) {
                 console.log("🚀 ~ handleSaveDiagnostic ~ savedDiagnosisProcedure:", savedDiagnosisProcedure);
-    
+
                 diagnosisProcedureSave.ID = savedDiagnosisProcedure; // Use the returned ID from the save operation
-    
+
                 setDiagnosticProcedures(prevProcedures => [
                     ...(Array.isArray(prevProcedures) ? prevProcedures : []), // Ensure it's an array
                     diagnosisProcedureSave,
@@ -164,10 +164,10 @@ const PatientEdit: React.FC = () => {
         }
     };
 
-    const deleteDiagnosis=(indexRemove: number, id: string )=> {
-        setDiagnosticProcedures(prevProcedures => prevProcedures.filter((_, index) => index!== indexRemove));
-  
-        diagnosisProcedureController.removeDiagnosisProcedure(id ).then(() => {
+    const deleteDiagnosis = (indexRemove: number, id: string) => {
+        setDiagnosticProcedures(prevProcedures => prevProcedures.filter((_, index) => index !== indexRemove));
+
+        diagnosisProcedureController.removeDiagnosisProcedure(id).then(() => {
             console.log("��� ~ deleteDiagnosis ~ deleted:", id);
         }).catch((error) => {
             console.error("Failed to delete diagnosis:", error);
@@ -263,8 +263,8 @@ const PatientEdit: React.FC = () => {
         if (currentDiagnosis.ID) {
             setModifiedDiagnosisProcedures(prev => new Set(prev).add(currentDiagnosis.ID!));
         }
-        if(id){
-            
+        if (id) {
+
             const data = await getReport(e.target.value, id)
             setReport(data)
         }
@@ -290,7 +290,7 @@ const PatientEdit: React.FC = () => {
         setDiagnosticProcedures(updatedDiagnosisProcedures);
     };
 
-    
+
 
 
 
@@ -534,7 +534,13 @@ const PatientEdit: React.FC = () => {
                                 <tbody>
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '10px' }}>Código más común</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>{report.CodeUnderDiagnosis}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '10px' }}>
+                                            {
+                                                diagnosis
+                                                    .find(diag => diag.Code === report.CodeUnderDiagnosis.slice(0, 3))
+                                                    ?.UnderDiagnosis.find(under => under.Code === report.CodeUnderDiagnosis)?.Description || "N/A"
+                                            }
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '10px' }}>Tiempo Promedio</td>
@@ -567,7 +573,7 @@ const PatientEdit: React.FC = () => {
                             {report?.SimilarPatients?.map((patient, index) => (
                                 <div key={index} style={{ marginBottom: '10px' }}>
                                     <p>
-                                        El paciente con género {patient.Patient.Gender ===true ? 'Masculino' : 'Femenino'}, nacido el{' '}
+                                        El paciente con género {patient.Patient.Gender === true ? 'Masculino' : 'Femenino'}, nacido el{' '}
                                         {patient.Patient.BirthDate.toString()}.
                                     </p>
                                     <p>El procedimiento fue {patient.IsSuccessful ? 'exitoso' : 'fracasado'}.</p>
@@ -591,15 +597,22 @@ const PatientEdit: React.FC = () => {
 
                                 <div className="grid grid-cols-2 gap-4 mb-4">
                                     <div>
+
                                         <p className="text-sm text-gray-600">
-                                            <span className="font-semibold">Paciente:</span> {d.IDPatient}
+                                            <span className="font-semibold">Código Diagnóstico:</span>
+                                            {diagnosis.find(diagnosisItem => diagnosisItem.Code === d.CodeDiagnosis)?.Description || "N/A"}
+                                            {d.CodeDiagnosis}
                                         </p>
                                         <p className="text-sm text-gray-600">
-                                            <span className="font-semibold">Código Diagnóstico:</span> {d.CodeDiagnosis}
+                                            <span className="font-semibold">Código Subdiagnóstico:</span>
+                                            {
+                                                diagnosis
+                                                    .find(diagnosisItem => diagnosisItem.Code === d.CodeDiagnosis)
+                                                    ?.UnderDiagnosis?.find(subdiagnosis => subdiagnosis.Code === d.CodeUnderDiagnosis)?.Description || "N/A"
+                                            }
+                                            {d.CodeUnderDiagnosis}
                                         </p>
-                                        <p className="text-sm text-gray-600">
-                                            <span className="font-semibold">Código Subdiagnóstico:</span> {d.CodeUnderDiagnosis}
-                                        </p>
+
                                     </div>
                                 </div>
 
@@ -713,13 +726,15 @@ const PatientEdit: React.FC = () => {
                                     >
                                         Añadir Procedimiento
                                     </button>{
-                                        d.ID && typeof d.ID == 'string' ? <button 
-                                        onClick={()=>deleteDiagnosis(index, d.ID)}>
+                                        d.ID && typeof d.ID == 'string' ? <button
+                                            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out"
+
+                                            onClick={() => deleteDiagnosis(index, d.ID)}>
                                             Eliminar Diagnóstico
-                                        </button>: ""
+                                        </button> : ""
 
                                     }
-                                    
+
                                 </div>
                             </div>
                         ))}
