@@ -5,8 +5,9 @@ Este proyecto es una aplicación frontend construida con React y Vite, diseñada
 
 Para ingresar a la aplicación, utiliza las siguientes credenciales:
 
-- **Email**: isaaccs2003@gmail.com
-- **Contraseña**: securePassword123
+
+- **Email**: doctor1@yopmail.com
+- **Contraseña**: 20032003
 
 ## Estructura del Proyecto
 
@@ -20,6 +21,7 @@ Los servicios se encargan de conectar con el backend y consumir las peticiones n
 - **Patient**: Gestiona las solicitudes relacionadas con los pacientes.
 - **Role**: Aunque los roles son fijos y se traen directamente de la base de datos, este servicio permite gestionar la lógica relacionada.
 - **Specialist**: Maneja la información y operaciones relacionadas con los especialistas.
+- **Shedule**: Toda la información que se recibe y envía al backend se gestiona desde este punto.
 
 ### Controladores
 
@@ -39,6 +41,8 @@ Las vistas se dividen en componentes que permiten la interacción del usuario. A
   - **Specialist**: Permite crear y editar especialistas.
   - **User**: Permite crear y editar usuarios.
 - **Patient Manager**: Se encarga de la gestión de pacientes, aunque actualmente solo se permite editar la información de los pacientes existentes.
+- **Shedule**: En esta sección se gestiona el módulo general para generar horarios aplicables a cualquier doctor.
+- **Schedule Doctor**: Esta sección está diseñada específicamente para el doctor que inicia sesión. Se utiliza el local storage para obtener los datos del usuario correspondiente.
 
 
 ### Rutas y Configuración
