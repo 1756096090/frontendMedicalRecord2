@@ -130,7 +130,9 @@ export const ScheduleView = () => {
     };
 
     const handleEventSubmit = () => {
-        let startAppointment
+
+        try {
+            let startAppointment
         let endAppointment
         if(editingEvent && dateEdit){
 
@@ -188,6 +190,11 @@ export const ScheduleView = () => {
         setEventEndTime({ hours: '00', minutes: '00' });
         setEventText("");
         setShowEventPopup(false);
+
+        }catch (error) {
+            console.error("Failed to edit event", error);
+        }
+        
     };
 
     const handleEditEvent = (event: Schedule) => {

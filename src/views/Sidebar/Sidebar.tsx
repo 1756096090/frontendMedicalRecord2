@@ -27,7 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
             icon: 'calendar-alt',
             title: "Programar Citas",
             href: "/schedule",
-            roles: ["schedule"]
+            roles: ["schedule", "generate_medical_records"]
         },
         {
             icon: 'calendar-plus',
