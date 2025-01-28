@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Patient } from '../../../models/Patient';
 import { PatientController } from '../../../controllers/PatientController';
-import { DiagnosisProcedure, ProcedureDetails } from '../../../models/DiagnosisProcedure';
-import { Diagnosis } from '../../../models/Diagnosis';
+import { DiagnosisProcedure } from '../../../models/DiagnosisProcedure';
 import { DiagnosisProcedureController } from '../../../controllers/DiagnosisProcedureController';
 import { MedicalRecordController } from '../../../controllers/MedicalRecord';
 import { MedicalRecord } from '../../../models/MedicalRecord';
@@ -42,9 +41,6 @@ const PatientEdit: React.FC = () => {
     const [hasAllergies, setHasAllergies] = useState(false);
     const [hasEndocrineDisorders, setHasEndocrineDisorders] = useState(false);
     const [hasNeurologicalDisorders, setHasNeurologicalDisorders] = useState(false);
-    const [diagnosis, setDiagnosis] = useState<Diagnosis[]>([]);
-    const [idDiagnosis, setIdDiagnosis] = useState<string>("");
-    const [idSubDiagnosis, setIdSubDiagnosis] = useState<string>("")
     const [diagnosisProcedures, setDiagnosticProcedures] = useState<DiagnosisProcedure[]>([]);
     const [medicationRecords, setMedicationRecords] = useState<MedicalRecord[]>([]);
     const [users, setUsers] = useState <User[]>([]);
@@ -60,10 +56,7 @@ const PatientEdit: React.FC = () => {
     useEffect(() => {
         if (id && id !== 'new') {
             console.log("🚀 ~ useEffect ~ id:", id)
-            const storedDiagnosis = localStorage.getItem("diagnosis");
-            if (storedDiagnosis) {
-                setDiagnosis(JSON.parse(storedDiagnosis));
-            }
+            
 
             diagnosisProcedureController.getDiagnosisProcedureByPatient(id).then(procedures => {
                 console.log("🚀 ~ test:", procedures);
@@ -142,39 +135,7 @@ const PatientEdit: React.FC = () => {
         return validationErrors.length === 0;
     };
 
-    const handleDiagnosisChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedDiagnosis = e.target.value
-        setIdDiagnosis(selectedDiagnosis);
-    }
-    const handleSubDiagnosisChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedSubDiagnosis = e.target.value
-        setIdSubDiagnosis(selectedSubDiagnosis);
-    }
 
-    const handleSaveDiagnostic = async () => {
-        if (id) {
-            const diagnosisProcedureSave: DiagnosisProcedure = {
-                IDPatient: id,
-                CodeDiagnosis: idDiagnosis,
-                CodeUnderDiagnosis: idSubDiagnosis,
-                Procedures: [],
-                ID: ''
-            };
-
-            const savedDiagnosisProcedure = await diagnosisProcedureController.addDiagnosisProcedure(diagnosisProcedureSave);
-
-            if (savedDiagnosisProcedure) {
-                console.log("🚀 ~ handleSaveDiagnostic ~ savedDiagnosisProcedure:", savedDiagnosisProcedure);
-
-                diagnosisProcedureSave.ID = savedDiagnosisProcedure; // Use the returned ID from the save operation
-
-                setDiagnosticProcedures(prevProcedures => [
-                    ...(Array.isArray(prevProcedures) ? prevProcedures : []), // Ensure it's an array
-                    diagnosisProcedureSave,
-                ]);
-            }
-        }
-    };
 
 
     const handleSave = async () => {
