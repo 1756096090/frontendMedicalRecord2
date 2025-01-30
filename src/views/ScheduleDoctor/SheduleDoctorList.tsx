@@ -7,6 +7,7 @@ interface SheduleDoctorListProps {
 }
 
 const SheduleDoctorList: React.FC<SheduleDoctorListProps> = ({ schedules, onEditHistoryRecords }) => {
+    const today = new Date();
 
     const formatDate = (date: Date) => {
         const options: Intl.DateTimeFormatOptions = {
@@ -21,12 +22,25 @@ const SheduleDoctorList: React.FC<SheduleDoctorListProps> = ({ schedules, onEdit
         return new Date(date).toLocaleString('es-ES', options);
     };
 
+    // Filtrar citas a partir de hoy y ordenarlas por fecha de inicio
+    const futureSchedules = schedules
+        .filter(schedule => new Date(schedule.StartAppointment) >= today)
+        .sort((a, b) => new Date(a.StartAppointment).getTime() - new Date(b.StartAppointment).getTime());
+
+    // Eliminar pacientes duplicados (manteniendo solo la primera cita futura de cada uno)
+    const uniqueSchedules = futureSchedules.reduce((acc: ScheduleDetails[], schedule) => {
+        if (!acc.some(s => s.IDPatient === schedule.IDPatient)) {
+            acc.push(schedule);
+        }
+        return acc;
+    }, []);
+
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <h2 className="text-3xl font-semibold mb-6 text-center text-gray-800">Doctor Schedules</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                { schedules && schedules.map((schedule: ScheduleDetails) => (
+                {uniqueSchedules.map(schedule => (
                     <div key={schedule.ID} className="bg-white rounded-lg shadow-lg p-6 hover:scale-105 hover:shadow-2xl">
                         <h3 className="text-xl font-semibold text-gray-700 mb-3">Doctor: {schedule.User?.Name || 'No Name Available'}</h3>
                         <h4 className="text-md text-gray-600 mb-2">Start Date: {formatDate(schedule.StartAppointment)}</h4>
