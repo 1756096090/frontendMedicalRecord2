@@ -5,9 +5,15 @@ Este proyecto es una aplicación frontend construida con React y Vite, diseñada
 
 Para ingresar a la aplicación, utiliza las siguientes credenciales:
 
-
+### Doctor
 - **Email**: doctor1@yopmail.com
 - **Contraseña**: 20032003
+
+### Admin
+- **Email**: isaaccs2003@gmail.com
+- **Contraseña**: securePassword123
+
+## 
 
 ## Estructura del Proyecto
 
