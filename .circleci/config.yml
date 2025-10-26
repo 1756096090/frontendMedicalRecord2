@@ -1,10 +1,5 @@
 version: 2.1
 
-parameters:
-  notify_telegram:
-    type: boolean
-    default: true
-
 executors:
   node24:
     docker:
@@ -66,57 +61,4 @@ jobs:
       - run:
           name: Build (si existe script "build")
           command: |
-            node -e "try{const p=require('./package.json');process.exit(p.scripts&&p.scripts.build?0:1)}catch(e){process.exit(1)}"
-            if [ $? -eq 0 ]; then
-              npm run build
-            else
-              echo 'No hay script "build"; se omite.'
-            fi
-
-      - run:
-          name: Empaquetar dist.zip (si existe ./dist)
-          command: |
-            if [ -d dist ]; then
-              zip -r dist.zip dist
-            else
-              echo "No existe ./dist; se omite empaquetado."
-            fi
-
-      - store_artifacts:
-          path: dist.zip
-          destination: dist.zip
-          when: always
-
-      - run:
-          name: Notificar por Telegram (always)
-          when: always
-          command: |
-            if [ "<< pipeline.parameters.notify_telegram >>" = "true" ]; then
-              STATUS="${CIRCLE_WORKFLOW_STATUS:-unknown}"
-              EMOJI="❌"
-              [ "$STATUS" = "success" ] && EMOJI="✅"
-              [ "$STATUS" = "failing" ] || [ "$STATUS" = "failed" ] && EMOJI="❌"
-              MSG="$(cat << 'EOF'
-${EMOJI} CircleCI
-Estado: '"$STATUS"'
-Repo: '"$REPO_NAME"'
-Rama: '"$CIRCLE_BRANCH"'
-Build: '"$CIRCLE_BUILD_URL"'
-EOF
-)"
-              if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-                curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                     -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown \
-                     --data-urlencode text="$MSG" >/dev/null || true
-              else
-                echo "TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID no configurados; omitiendo Telegram."
-              fi
-            else
-              echo "notify_telegram=false; no se envía Telegram."
-            fi
-
-workflows:
-  build:
-    jobs:
-      - build_and_package:
-          notify_telegram: << pipeline.parameters.notify_telegram >>
+            node -e "try{const p=require('./package.json');process.exit(p.scripts&&p.scripts.build?0:1)}catch(e){pro
