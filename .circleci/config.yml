@@ -8,7 +8,7 @@ parameters:
 executors:
   node24_browsers:
     docker:
-      - image: cimg/node:24.6-browsers   # Incluye Chrome + chromedriver
+      - image: cimg/node:24.6-browsers   # Chrome + chromedriver incluidos
 
 jobs:
   build_test_package:
@@ -23,6 +23,7 @@ jobs:
           command: |
             echo "Repo: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"
             echo "Branch: ${CIRCLE_BRANCH}"
+            echo "Commit: ${CIRCLE_SHA1}"
 
       # ---- Cache npm por lockfile ----
       - run:
@@ -69,7 +70,7 @@ jobs:
       - run:
           name: Start preview server (background)
           command: |
-            # Sirve en 0.0.0.0:4173 (ver package.json: "serve:ci")
+            # Requiere script "serve:ci": vite preview --host 0.0.0.0 --port 4173 --strictPort
             (npm run serve:ci &> /tmp/preview.log) &
             for i in $(seq 1 40); do
               if curl -fsS http://localhost:4173 >/dev/null; then
@@ -79,8 +80,7 @@ jobs:
               echo "esperando preview... ($i)"
               sleep 1
             done
-            # Muestra primeras líneas del log para diagnosticar si algo falla
-            head -n 50 /tmp/preview.log || true
+            head -n 80 /tmp/preview.log || true
 
       # ---- Selenium (usa tests/selenium.smoke.js) ----
       - run:
@@ -106,6 +106,11 @@ jobs:
       - store_artifacts:
           path: dist.zip
           destination: dist.zip
+          when: always
+
+      - store_artifacts:
+          path: /tmp/preview.log
+          destination: preview.log
           when: always
 
       # --------- Telegram: éxito ---------
