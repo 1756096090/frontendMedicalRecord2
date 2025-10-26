@@ -150,5 +150,4 @@ jobs:
 workflows:
   build:
     jobs:
-      - build_test_package:
-          notify_telegram: << pipeline.parameters.notify_telegram >>
+      - build_test_package
