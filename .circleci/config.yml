@@ -9,14 +9,14 @@ commands:
   restore_npm_cache:
     steps:
       - run:
-          name: "Calcular llave del cache"
+          name: Calcular llave del cache
           command: |
             if [ -f package-lock.json ]; then
-              echo "export NPM_LOCK_HASH=$(sha256sum package-lock.json | cut -d' ' -f1)" >> $BASH_ENV
+              echo "export NPM_LOCK_HASH=$(sha256sum package-lock.json | cut -d' ' -f1)" >> "$BASH_ENV"
             else
-              echo "export NPM_LOCK_HASH=no-lock" >> $BASH_ENV
+              echo "export NPM_LOCK_HASH=no-lock" >> "$BASH_ENV"
             fi
-            source $BASH_ENV
+            source "$BASH_ENV"
       - restore_cache:
           keys:
             - npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
@@ -40,8 +40,8 @@ jobs:
       - run:
           name: Exportar REPO_NAME
           command: |
-            echo "export REPO_NAME=${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}" >> $BASH_ENV
-            source $BASH_ENV
+            echo "export REPO_NAME=${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}" >> "$BASH_ENV"
+            source "$BASH_ENV"
             echo "Repo: $REPO_NAME"
             echo "Branch: ${CIRCLE_BRANCH}"
 
@@ -83,30 +83,17 @@ jobs:
           path: dist.zip
           destination: dist.zip
 
-    - run:
-      name: Notificar por Telegram (si hay variables)
-      command: |
-        if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-          STATUS="${CIRCLE_WORKFLOW_STATUS:-unknown}"
-          REPO="${REPO_NAME:-${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}}"
-  
-          MSG=$(printf 'CircleCI\nEstado: %s\nRepo: %s\nRama: %s\nBuild: %s' \
-            "$STATUS" "$REPO" "${CIRCLE_BRANCH}" "${CIRCLE_BUILD_URL}")
-  
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d chat_id="${TELEGRAM_CHAT_ID}" \
-            --data-urlencode text="$MSG" >/dev/null || true
-        else
-          echo "TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID no configurados; omitiendo Telegram."
-        fi
-
-Estado: ${STATUS}
-Repo: ${REPO_NAME}
-Rama: ${CIRCLE_BRANCH}
-Build: ${CIRCLE_BUILD_URL}"
+      - run:
+          name: Notificar por Telegram (si hay variables)
+          command: |
+            if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+              STATUS="${CIRCLE_WORKFLOW_STATUS:-unknown}"
+              REPO="${REPO_NAME:-${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}}"
+              MSG=$(printf 'CircleCI\nEstado: %s\nRepo: %s\nRama: %s\nBuild: %s' \
+                "$STATUS" "$REPO" "${CIRCLE_BRANCH}" "${CIRCLE_BUILD_URL}")
               curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                   -d chat_id="${TELEGRAM_CHAT_ID}" \
-                   --data-urlencode text="$MSG" >/dev/null || true
+                -d chat_id="${TELEGRAM_CHAT_ID}" \
+                --data-urlencode text="$MSG" >/dev/null || true
             else
               echo "TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID no configurados; omitiendo Telegram."
             fi
