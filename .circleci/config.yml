@@ -102,16 +102,18 @@ jobs:
             else
               echo "No existe ./dist; se omite empaquetado."
             fi
+            # Evita fallo si no se creó el zip
+            if [ ! -f dist.zip ]; then
+              echo "No hay build; subiendo placeholder." > dist.zip
+            fi
 
       - store_artifacts:
           path: dist.zip
           destination: dist.zip
-          when: always
 
       - store_artifacts:
           path: /tmp/preview.log
           destination: preview.log
-          when: always
 
       # --------- Telegram: éxito ---------
       - run:
@@ -121,14 +123,7 @@ jobs:
             if [ "<< pipeline.parameters.notify_telegram >>" = "true" ] && \
                [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
               EMOJI="✅"
-              MSG="$(cat << 'EOF'
-${EMOJI} CircleCI
-Estado: SUCCESS
-Repo: '"${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"'
-Rama: '"$CIRCLE_BRANCH"'
-Build: '"$CIRCLE_BUILD_URL"'
-EOF
-)"
+              MSG="$(printf '%b' "${EMOJI} CircleCI\nEstado: SUCCESS\nRepo: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}\nRama: ${CIRCLE_BRANCH}\nBuild: ${CIRCLE_BUILD_URL}\n")"
               curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
                    -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown \
                    --data-urlencode text="$MSG" >/dev/null || true
@@ -144,14 +139,7 @@ EOF
             if [ "<< pipeline.parameters.notify_telegram >>" = "true" ] && \
                [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
               EMOJI="❌"
-              MSG="$(cat << 'EOF'
-${EMOJI} CircleCI
-Estado: FAILED
-Repo: '"${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"'
-Rama: '"$CIRCLE_BRANCH"'
-Build: '"$CIRCLE_BUILD_URL"'
-EOF
-)"
+              MSG="$(printf '%b' "${EMOJI} CircleCI\nEstado: FAILED\nRepo: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}\nRama: ${CIRCLE_BRANCH}\nBuild: ${CIRCLE_BUILD_URL}\n")"
               curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
                    -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown \
                    --data-urlencode text="$MSG" >/dev/null || true
