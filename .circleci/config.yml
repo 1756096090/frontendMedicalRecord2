@@ -8,7 +8,7 @@ parameters:
 executors:
   node24_browsers:
     docker:
-      - image: cimg/node:24.6-browsers
+      - image: cimg/node:24.6-browsers   # Chrome + chromedriver
 
 jobs:
   build_test_package:
@@ -26,7 +26,7 @@ jobs:
             npm -v
             npx vite --version || true
 
-      # Cache npm por lockfile
+      # Cache npm
       - run:
           name: Cache key
           command: |
@@ -40,97 +40,86 @@ jobs:
           keys:
             - npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
             - npm-v1-{{ arch }}-
-
       - run:
           name: Install deps
           command: |
             if [ -f package-lock.json ]; then npm ci; else npm install; fi
-
       - save_cache:
           key: npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
           paths:
             - ~/.npm
 
+      # Build + validar dist
       - run:
           name: Build (si existe) y validar dist
           command: |
-            # Build condicional
             node -e "try{const p=require('./package.json');process.exit(p.scripts&&p.scripts.build?0:1)}catch(e){process.exit(1)}"
             if [ $? -eq 0 ]; then
               npm run build
             else
               echo 'No hay script "build"; se omite.'
             fi
-
-            # Validación fuerte de dist
-            if [ ! -d dist ]; then
-              echo "❌ No existe ./dist. Revisa el log de build."
-              exit 1
-            fi
-            if [ ! -f dist/index.html ]; then
-              echo "❌ No existe ./dist/index.html. Vite preview necesita ese archivo."
-              ls -la dist || true
+            if [ ! -d dist ] || [ ! -f dist/index.html ]; then
+              echo "❌ No existe dist/index.html. Revisa tu build de Vite."
               exit 1
             fi
 
+      # *** CLAVE: Preview + Selenium en el MISMO STEP ***
       - run:
-          name: Start preview server (background) y esperar disponibilidad
+          name: Preview + Selenium en el mismo step
           command: |
-            # Elige comando: npm run serve:ci (si existe) o fallback a npx vite preview
-            SERVE_CMD=""
-            node -e "try{const p=require('./package.json');process.exit(p.scripts && p.scripts['serve:ci']?0:1)}catch(e){process.exit(1)}"
-            if [ $? -eq 0 ]; then
+            set -euo pipefail
+
+            # Elegir comando de preview
+            if node -e "try{const p=require('./package.json');process.exit(p.scripts && p.scripts['serve:ci']?0:1)}catch(e){process.exit(1)}"; then
               SERVE_CMD="npm run serve:ci"
             else
               SERVE_CMD="npx vite preview --host 0.0.0.0 --port 4173 --strictPort"
             fi
             echo "Usando: $SERVE_CMD"
 
+            # Arrancar preview en background dentro del mismo step
             ($SERVE_CMD &> /tmp/preview.log) &
             PREVIEW_PID=$!
+            echo "preview pid=$PREVIEW_PID"
 
             # Espera hasta 120s a que responda
             for i in $(seq 1 120); do
-              if curl -fsS "${APP_URL}" >/dev/null; then
-                echo "✅ preview listo en ${APP_URL} (pid=$PREVIEW_PID)"
+              if curl -fsS "$APP_URL" >/dev/null; then
+                echo "✅ preview OK en $APP_URL"
                 break
               fi
-              # Si el proceso murió, aborta y muestra log
               if ! ps -p $PREVIEW_PID >/dev/null 2>&1; then
-                echo "❌ 'vite preview' se detuvo (falló al iniciar)."
-                echo "===== LOG preview (últimas 200 líneas) ====="
+                echo "❌ 'vite preview' murió al iniciar."
                 tail -n 200 /tmp/preview.log || true
                 exit 1
               fi
               echo "⏳ esperando preview... ($i)"
               sleep 1
             done
-
-            # Timeout
-            if ! curl -fsS "${APP_URL}" >/dev/null; then
-              echo "❌ preview no respondió a tiempo (${APP_URL})"
-              echo "===== LOG preview (últimas 200 líneas) ====="
+            if ! curl -fsS "$APP_URL" >/dev/null; then
+              echo "❌ preview no respondió a tiempo ($APP_URL)"
               tail -n 200 /tmp/preview.log || true
               exit 1
             fi
 
-            echo "===== LOG preview (primeras 80 líneas) ====="
-            head -n 80 /tmp/preview.log || true
-
-      - run:
-          name: Selenium smoke (si existe script)
-          command: |
-            node -e "try{const p=require('./package.json');process.exit(p.scripts && p.scripts['test:selenium']?0:1)}catch(e){process.exit(1)}"
-            if [ $? -eq 0 ]; then
-              npm run test:selenium
+            # Ejecutar Selenium si existe script
+            if node -e "try{const p=require('./package.json');process.exit(p.scripts && p.scripts['test:selenium']?0:1)}catch(e){process.exit(1)}"; then
+              echo "▶️  npm run test:selenium"
+              APP_URL="$APP_URL" npm run test:selenium
             else
               echo "No hay script test:selenium; se omite Selenium."
             fi
 
+            # Limpieza
+            kill $PREVIEW_PID || true
+            wait $PREVIEW_PID || true
+          no_output_timeout: 10m
+
+      # Empaquetado y artefactos
       - run:
           name: Empaquetar dist.zip
-          command: |
-            zip -r dist.zip dist
+          command: zip -r dist.zip dist
       - store_artifacts:
           path: dist.zip
           destination: dist.zip
@@ -138,30 +127,26 @@ jobs:
           path: /tmp/preview.log
           destination: preview.log
 
+      # Telegram: SUCCESS
       - run:
           name: Notificar Telegram - SUCCESS
           when: on_success
           command: |
-            if [ "<< pipeline.parameters.notify_telegram >>" = "true" ] && \
-               [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            if [ "<< pipeline.parameters.notify_telegram >>" = "true" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
               EMOJI="✅"
               MSG="$(printf '%b' "${EMOJI} CircleCI\nEstado: SUCCESS\nRepo: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}\nRama: ${CIRCLE_BRANCH}\nBuild: ${CIRCLE_BUILD_URL}\n")"
-              curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                   -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown \
-                   --data-urlencode text="$MSG" >/devnull || true
+              curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown --data-urlencode text="$MSG" >/dev/null || true
             fi
 
+      # Telegram: FAILED
       - run:
           name: Notificar Telegram - FAILED
           when: on_fail
           command: |
-            if [ "<< pipeline.parameters.notify_telegram >>" = "true" ] && \
-               [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            if [ "<< pipeline.parameters.notify_telegram >>" = "true" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
               EMOJI="❌"
               MSG="$(printf '%b' "${EMOJI} CircleCI\nEstado: FAILED\nRepo: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}\nRama: ${CIRCLE_BRANCH}\nBuild: ${CIRCLE_BUILD_URL}\n")"
-              curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                   -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown \
-                   --data-urlencode text="$MSG" >/devnull || true
+              curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown --data-urlencode text="$MSG" >/dev/null || true
             fi
 
 workflows:
