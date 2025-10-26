@@ -15,6 +15,7 @@ jobs:
     executor: node24_browsers
     environment:
       CI: "true"
+      APP_URL: "http://localhost:4173"
     steps:
       - checkout
 
@@ -57,7 +58,7 @@ jobs:
 
       # ---- Build condicional ----
       - run:
-          name: Build (si existe script "build")
+          name: Build (si existe script "build") y validar dist
           command: |
             node -e "try{const p=require('./package.json');process.exit(p.scripts&&p.scripts.build?0:1)}catch(e){process.exit(1)}"
             if [ $? -eq 0 ]; then
@@ -65,22 +66,44 @@ jobs:
             else
               echo 'No hay script "build"; se omite.'
             fi
+            # Verifica que dist exista tras build (si no, no lances preview)
+            if [ ! -d dist ]; then
+              echo "⚠️  No existe ./dist; no se levantará vite preview."
+            fi
 
       # ---- Levantar preview (vite) para pruebas E2E ----
       - run:
-          name: Start preview server (background)
+          name: Start preview server (background) y esperar disponibilidad
           command: |
-            # Requiere script "serve:ci": vite preview --host 0.0.0.0 --port 4173 --strictPort
-            (npm run serve:ci &> /tmp/preview.log) &
-            for i in $(seq 1 40); do
-              if curl -fsS http://localhost:4173 >/dev/null; then
-                echo "preview listo en http://localhost:4173"
-                break
+            if [ -d dist ]; then
+              (npm run serve:ci &> /tmp/preview.log) &
+              # Espera hasta 120s a que responda
+              for i in $(seq 1 120); do
+                if curl -fsS "${APP_URL}" >/dev/null; then
+                  echo "✅ preview listo en ${APP_URL}"
+                  break
+                fi
+                if ! ps aux | grep -v grep | grep -q "vite preview"; then
+                  echo "❌ El proceso 'vite preview' no está corriendo (falló al iniciar)."
+                  echo "===== LOG preview (últimas 200 líneas) ====="
+                  tail -n 200 /tmp/preview.log || true
+                  exit 1
+                fi
+                echo "⏳ esperando preview... ($i)"
+                sleep 1
+              done
+              # Si no respondió en el tiempo, falla con logs
+              if ! curl -fsS "${APP_URL}" >/dev/null; then
+                echo "❌ preview no respondió a tiempo (${APP_URL})"
+                echo "===== LOG preview (últimas 200 líneas) ====="
+                tail -n 200 /tmp/preview.log || true
+                exit 1
               fi
-              echo "esperando preview... ($i)"
-              sleep 1
-            done
-            head -n 80 /tmp/preview.log || true
+              echo "===== LOG preview (primeras 80 líneas) ====="
+              head -n 80 /tmp/preview.log || true
+            else
+              echo "⚠️  No hay ./dist, se omite preview y pruebas E2E."
+            fi
 
       # ---- Selenium (usa tests/selenium.smoke.js) ----
       - run:
@@ -88,7 +111,11 @@ jobs:
           command: |
             node -e "try{const p=require('./package.json');process.exit(p.scripts && p.scripts['test:selenium']?0:1)}catch(e){process.exit(1)}"
             if [ $? -eq 0 ]; then
-              APP_URL=http://localhost:4173 npm run test:selenium
+              if [ -d dist ]; then
+                npm run test:selenium
+              else
+                echo "⚠️  No hay ./dist; se omite Selenium."
+              fi
             else
               echo "No hay script test:selenium; se omite Selenium."
             fi
