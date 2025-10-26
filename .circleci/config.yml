@@ -83,12 +83,23 @@ jobs:
           path: dist.zip
           destination: dist.zip
 
-      - run:
-          name: Notificar por Telegram (si hay variables)
-          command: |
-            if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-              STATUS="${CIRCLE_WORKFLOW_STATUS:-unknown}"
-              MSG="CircleCI
+    - run:
+      name: Notificar por Telegram (si hay variables)
+      command: |
+        if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+          STATUS="${CIRCLE_WORKFLOW_STATUS:-unknown}"
+          REPO="${REPO_NAME:-${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}}"
+  
+          MSG=$(printf 'CircleCI\nEstado: %s\nRepo: %s\nRama: %s\nBuild: %s' \
+            "$STATUS" "$REPO" "${CIRCLE_BRANCH}" "${CIRCLE_BUILD_URL}")
+  
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            --data-urlencode text="$MSG" >/dev/null || true
+        else
+          echo "TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID no configurados; omitiendo Telegram."
+        fi
+
 Estado: ${STATUS}
 Repo: ${REPO_NAME}
 Rama: ${CIRCLE_BRANCH}
