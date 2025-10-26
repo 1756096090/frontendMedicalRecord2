@@ -1,4 +1,4 @@
-version: 2.3
+version: 2.1
 
 parameters:
   notify_telegram:
@@ -8,7 +8,7 @@ parameters:
 executors:
   node24_browsers:
     docker:
-      - image: cimg/node:24.6-browsers   # Incluye Chrome y chromedriver
+      - image: cimg/node:24.6-browsers
 
 jobs:
   build_test_package:
@@ -18,15 +18,12 @@ jobs:
       APP_URL: "http://localhost:4173"
     steps:
       - checkout
-
       - run:
           name: Versions
           command: |
             node -v
             npm -v
             npx -y vite --version || true
-
-      # ===== Cache npm =====
       - run:
           name: Cache key
           command: |
@@ -36,12 +33,10 @@ jobs:
               echo "export NPM_LOCK_HASH=no-lock" >> $BASH_ENV
             fi
             source $BASH_ENV
-
       - restore_cache:
           keys:
             - npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
             - npm-v1-{{ arch }}-
-
       - run:
           name: Install deps
           command: |
@@ -50,23 +45,17 @@ jobs:
             else
               npm install
             fi
-
       - save_cache:
           key: npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
           paths:
             - ~/.npm
-
-      # ===== Unit tests (Vitest) =====
       - run:
           name: Unit tests (Vitest)
           command: npm run test:unit
-
       - store_artifacts:
           path: coverage
           destination: coverage
           when: always
-
-      # ===== Build y validar dist =====
       - run:
           name: Build (si existe) y validar dist
           command: |
@@ -80,22 +69,15 @@ jobs:
               echo "❌ No existe dist/index.html. Revisa tu build de Vite."
               exit 1
             fi
-
-      # ===== E2E: Preview + Selenium en el MISMO STEP (server estático) =====
       - run:
           name: Preview + Selenium (mismo step, server estático)
           command: |
             set -euo pipefail
-
-            # Servidor estático sobre ./dist (más robusto que 'vite preview' en CI)
             SERVE_CMD="npx -y serve dist -l 4173"
             echo "Usando: $SERVE_CMD"
-
             ($SERVE_CMD &> /tmp/preview.log) &
             PREVIEW_PID=$!
             echo "preview pid=$PREVIEW_PID"
-
-            # Espera hasta 120s a que responda
             for i in $(seq 1 120); do
               if curl -fsS "$APP_URL" >/dev/null; then
                 echo "✅ preview OK en $APP_URL"
@@ -109,40 +91,29 @@ jobs:
               echo "⏳ esperando preview... ($i)"
               sleep 1
             done
-
             if ! curl -fsS "$APP_URL" >/dev/null; then
               echo "❌ preview no respondió a tiempo ($APP_URL)"
               tail -n 200 /tmp/preview.log || true
               exit 1
             fi
-
-            # Ejecutar Selenium si existe script
             if node -e "try{const p=require('./package.json');process.exit(p.scripts && p.scripts['test:selenium']?0:1)}catch(e){process.exit(1)}"; then
               echo "▶️  npm run test:selenium"
               APP_URL="$APP_URL" npm run test:selenium
             else
               echo "No hay script test:selenium; se omite Selenium."
             fi
-
-            # Limpieza
             kill $PREVIEW_PID || true
             wait $PREVIEW_PID || true
           no_output_timeout: 10m
-
-      # ===== Artefactos =====
       - run:
           name: Empaquetar dist.zip
           command: zip -r dist.zip dist
-
       - store_artifacts:
           path: dist.zip
           destination: dist.zip
-
       - store_artifacts:
           path: /tmp/preview.log
           destination: preview.log
-
-      # ===== Telegram: SUCCESS =====
       - run:
           name: Notificar Telegram - SUCCESS
           when: on_success
@@ -154,8 +125,6 @@ jobs:
                    -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown \
                    --data-urlencode text="$MSG" >/dev/null || true
             fi
-
-      # ===== Telegram: FAILED =====
       - run:
           name: Notificar Telegram - FAILED
           when: on_fail
@@ -168,7 +137,6 @@ jobs:
                    --data-urlencode text="$MSG" >/dev/null || true
             fi
 
-  # ===== Auto-merge a main (opcional) =====
   merge_to_main:
     docker:
       - image: cimg/base:stable
@@ -195,22 +163,17 @@ jobs:
               echo "❌ Falta GIT_PAT (token con scope repo)."
               exit 1
             fi
-
             git config user.name  "${GIT_USER_NAME:-circleci-bot}"
             git config user.email "${GIT_USER_EMAIL:-ci@local}"
-
             ORIGIN_URL="$(git config --get remote.origin.url)"
             TOKEN_URL="$(echo "$ORIGIN_URL" | sed -E "s#https://#https://${GIT_PAT}@#")"
-
             git fetch origin
             git checkout main
             git pull origin main --ff-only || true
-
             git merge --no-ff "origin/${CIRCLE_BRANCH}" -m "ci: merge ${CIRCLE_BRANCH} -> main [skip ci]" || {
               echo "⚠️ Merge con conflictos. Abortando."
               exit 1
             }
-
             git push "$TOKEN_URL" main
 
 workflows:
