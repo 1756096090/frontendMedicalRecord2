@@ -61,4 +61,46 @@ jobs:
       - run:
           name: Build (si existe script "build")
           command: |
-            node -e "try{const p=require('./package.json');process.exit(p.scripts&&p.scripts.build?0:1)}catch(e){pro
+            node -e "try{const p=require('./package.json');process.exit(p.scripts&&p.scripts.build?0:1)}catch(e){process.exit(1)}"
+            if [ $? -eq 0 ]; then
+              npm run build
+            else
+              echo 'No hay script "build"; se omite.'
+            fi
+
+      - run:
+          name: Empaquetar dist.zip (si existe ./dist)
+          command: |
+            if [ -d dist ]; then
+              zip -r dist.zip dist
+            else
+              echo "No existe ./dist; se omite empaquetado."
+            fi
+            # Evitar fallo en store_artifacts si no existe
+            [ -f dist.zip ] || touch dist.zip
+
+      - store_artifacts:
+          path: dist.zip
+          destination: dist.zip
+
+      - run:
+          name: Notificar por Telegram (si hay variables)
+          command: |
+            if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+              STATUS="${CIRCLE_WORKFLOW_STATUS:-unknown}"
+              MSG="CircleCI
+Estado: ${STATUS}
+Repo: ${REPO_NAME}
+Rama: ${CIRCLE_BRANCH}
+Build: ${CIRCLE_BUILD_URL}"
+              curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                   -d chat_id="${TELEGRAM_CHAT_ID}" \
+                   --data-urlencode text="$MSG" >/dev/null || true
+            else
+              echo "TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID no configurados; omitiendo Telegram."
+            fi
+
+workflows:
+  build:
+    jobs:
+      - build_and_package
