@@ -1,51 +1,44 @@
 version: 2.1
 
+parameters:
+  notify_telegram:
+    type: boolean
+    default: true
+
 executors:
-  node24:
+  node24_browsers:
     docker:
-      - image: cimg/node:24.6
-
-commands:
-  restore_npm_cache:
-    steps:
-      - run:
-          name: Calcular llave del cache
-          command: |
-            if [ -f package-lock.json ]; then
-              echo "export NPM_LOCK_HASH=$(sha256sum package-lock.json | cut -d' ' -f1)" >> "$BASH_ENV"
-            else
-              echo "export NPM_LOCK_HASH=no-lock" >> "$BASH_ENV"
-            fi
-            source "$BASH_ENV"
-      - restore_cache:
-          keys:
-            - npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
-            - npm-v1-{{ arch }}-
-
-  save_npm_cache:
-    steps:
-      - save_cache:
-          key: npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
-          paths:
-            - ~/.npm
+      - image: cimg/node:24.6-browsers   # Incluye Chrome + chromedriver
 
 jobs:
-  build_and_package:
-    executor: node24
+  build_test_package:
+    executor: node24_browsers
     environment:
       CI: "true"
     steps:
       - checkout
 
       - run:
-          name: Exportar REPO_NAME
+          name: Echo repo/branch
           command: |
-            echo "export REPO_NAME=${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}" >> "$BASH_ENV"
-            source "$BASH_ENV"
-            echo "Repo: $REPO_NAME"
+            echo "Repo: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"
             echo "Branch: ${CIRCLE_BRANCH}"
 
-      - restore_npm_cache
+      # ---- Cache npm por lockfile ----
+      - run:
+          name: Calcular llave cache npm
+          command: |
+            if [ -f package-lock.json ]; then
+              echo "export NPM_LOCK_HASH=$(sha256sum package-lock.json | cut -d' ' -f1)" >> $BASH_ENV
+            else
+              echo "export NPM_LOCK_HASH=no-lock" >> $BASH_ENV
+            fi
+            source $BASH_ENV
+
+      - restore_cache:
+          keys:
+            - npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
+            - npm-v1-{{ arch }}-
 
       - run:
           name: Instalar dependencias
@@ -56,8 +49,12 @@ jobs:
               npm install
             fi
 
-      - save_npm_cache
+      - save_cache:
+          key: npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
+          paths:
+            - ~/.npm
 
+      # ---- Build condicional ----
       - run:
           name: Build (si existe script "build")
           command: |
@@ -68,6 +65,35 @@ jobs:
               echo 'No hay script "build"; se omite.'
             fi
 
+      # ---- Levantar preview (vite) para pruebas E2E ----
+      - run:
+          name: Start preview server (background)
+          command: |
+            # Sirve en 0.0.0.0:4173 (ver package.json: "serve:ci")
+            (npm run serve:ci &> /tmp/preview.log) &
+            for i in $(seq 1 40); do
+              if curl -fsS http://localhost:4173 >/dev/null; then
+                echo "preview listo en http://localhost:4173"
+                break
+              fi
+              echo "esperando preview... ($i)"
+              sleep 1
+            done
+            # Muestra primeras líneas del log para diagnosticar si algo falla
+            head -n 50 /tmp/preview.log || true
+
+      # ---- Selenium (usa tests/selenium.smoke.js) ----
+      - run:
+          name: Selenium smoke
+          command: |
+            node -e "try{const p=require('./package.json');process.exit(p.scripts && p.scripts['test:selenium']?0:1)}catch(e){process.exit(1)}"
+            if [ $? -eq 0 ]; then
+              APP_URL=http://localhost:4173 npm run test:selenium
+            else
+              echo "No hay script test:selenium; se omite Selenium."
+            fi
+
+      # ---- Empaquetado y artefactos ----
       - run:
           name: Empaquetar dist.zip (si existe ./dist)
           command: |
@@ -76,29 +102,60 @@ jobs:
             else
               echo "No existe ./dist; se omite empaquetado."
             fi
-            # Evitar fallo en store_artifacts si no existe
-            [ -f dist.zip ] || touch dist.zip
 
       - store_artifacts:
           path: dist.zip
           destination: dist.zip
+          when: always
 
+      # --------- Telegram: éxito ---------
       - run:
-          name: Notificar por Telegram (si hay variables)
+          name: Notificar Telegram - SUCCESS
+          when: on_success
           command: |
-            if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-              STATUS="${CIRCLE_WORKFLOW_STATUS:-unknown}"
-              REPO="${REPO_NAME:-${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}}"
-              MSG=$(printf 'CircleCI\nEstado: %s\nRepo: %s\nRama: %s\nBuild: %s' \
-                "$STATUS" "$REPO" "${CIRCLE_BRANCH}" "${CIRCLE_BUILD_URL}")
+            if [ "<< pipeline.parameters.notify_telegram >>" = "true" ] && \
+               [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+              EMOJI="✅"
+              MSG="$(cat << 'EOF'
+${EMOJI} CircleCI
+Estado: SUCCESS
+Repo: '"${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"'
+Rama: '"$CIRCLE_BRANCH"'
+Build: '"$CIRCLE_BUILD_URL"'
+EOF
+)"
               curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                -d chat_id="${TELEGRAM_CHAT_ID}" \
-                --data-urlencode text="$MSG" >/dev/null || true
+                   -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown \
+                   --data-urlencode text="$MSG" >/dev/null || true
             else
-              echo "TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID no configurados; omitiendo Telegram."
+              echo "Telegram deshabilitado o variables no definidas."
+            fi
+
+      # --------- Telegram: fallo ---------
+      - run:
+          name: Notificar Telegram - FAILED
+          when: on_fail
+          command: |
+            if [ "<< pipeline.parameters.notify_telegram >>" = "true" ] && \
+               [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+              EMOJI="❌"
+              MSG="$(cat << 'EOF'
+${EMOJI} CircleCI
+Estado: FAILED
+Repo: '"${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"'
+Rama: '"$CIRCLE_BRANCH"'
+Build: '"$CIRCLE_BUILD_URL"'
+EOF
+)"
+              curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                   -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown \
+                   --data-urlencode text="$MSG" >/dev/null || true
+            else
+              echo "Telegram deshabilitado o variables no definidas."
             fi
 
 workflows:
   build:
     jobs:
-      - build_and_package
+      - build_test_package:
+          notify_telegram: << pipeline.parameters.notify_telegram >>
