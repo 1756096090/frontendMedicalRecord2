@@ -9,7 +9,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "serve:ci": "vite preview --host 0.0.0.0 --port 4173 --strictPort",
-    "test:selenium": "node tests/selenium.smoke.js"
+    "test:selenium": "node tests/selenium.smoke.js",
+    "test": "vitest",
+    "test:unit": "vitest --run",
+    "test:watch": "vitest",
+    "coverage": "vitest --run --coverage"
   },
   "dependencies": {
     "frontendmedicalrecord": "file:",
@@ -23,23 +27,29 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.11",
     "@types/react-datepicker": "^6.2.0",
     "@types/react-dom": "^18.3.1",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react-swc": "^3.5.0",
+    "@vitest/coverage-v8": "^4.0.3",
     "autoprefixer": "^10.4.20",
     "chromedriver": "^141.0.4",
     "eslint": "^9.13.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.13",
     "globals": "^15.11.0",
+    "jsdom": "^27.0.1",
     "postcss": "^8.4.47",
     "react-day-picker": "^9.3.2",
     "selenium-webdriver": "^4.38.0",
     "tailwindcss": "^3.4.14",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.10.0",
-    "vite": "^5.4.9"
+    "vite": "^5.4.9",
+    "vitest": "^4.0.3"
   }
 }
