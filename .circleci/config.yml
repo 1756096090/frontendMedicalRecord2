@@ -49,6 +49,16 @@ jobs:
           paths:
             - ~/.npm
 
+      # ===================== UNIT TESTS (Vitest) =====================
+      - run:
+          name: Unit tests (Vitest)
+          command: npm run test:unit
+      - store_artifacts:
+          path: coverage
+          destination: coverage
+          when: always
+      # ===============================================================
+
       # Build + validar dist
       - run:
           name: Build (si existe) y validar dist
@@ -89,7 +99,7 @@ jobs:
                 echo "✅ preview OK en $APP_URL"
                 break
               fi
-              if ! ps -p $PREVIEW_PID >/dev/null 2>&1; then
+              if ! ps -p $PREVIEW_PID >/devnull 2>&1; then
                 echo "❌ 'vite preview' murió al iniciar."
                 tail -n 200 /tmp/preview.log || true
                 exit 1
@@ -149,7 +159,62 @@ jobs:
               curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown --data-urlencode text="$MSG" >/dev/null || true
             fi
 
+  # =============== Auto-merge a main (opcional) ===============
+  merge_to_main:
+    docker:
+      - image: cimg/base:stable
+    environment:
+      GIT_AUTHOR_NAME: "${GIT_USER_NAME}"
+      GIT_AUTHOR_EMAIL: "${GIT_USER_EMAIL}"
+      GIT_COMMITTER_NAME: "${GIT_USER_NAME}"
+      GIT_COMMITTER_EMAIL: "${GIT_USER_EMAIL}"
+    steps:
+      - checkout
+      - run:
+          name: Auto-merge a main (solo si AUTO_MERGE=true y no estamos en main)
+          command: |
+            set -euo pipefail
+            if [ "${AUTO_MERGE:-false}" != "true" ]; then
+              echo "AUTO_MERGE no está habilitado; omitiendo."
+              exit 0
+            fi
+            if [ "${CIRCLE_BRANCH}" = "main" ]; then
+              echo "Ya estamos en main; omitiendo."
+              exit 0
+            fi
+            if [ -z "${GIT_PAT:-}" ]; then
+              echo "❌ Falta GIT_PAT (token con scope repo)."
+              exit 1
+            fi
+
+            git config user.name  "${GIT_USER_NAME:-circleci-bot}"
+            git config user.email "${GIT_USER_EMAIL:-ci@local}"
+
+            # Reconstruir URL con token
+            ORIGIN_URL="$(git config --get remote.origin.url)"
+            TOKEN_URL="$(echo "$ORIGIN_URL" | sed -E "s#https://#https://${GIT_PAT}@#")"
+
+            git fetch origin
+            git checkout main
+            git pull origin main --ff-only || true
+
+            # Intenta merge fast-forward, si no, merge normal
+            git merge --no-ff "origin/${CIRCLE_BRANCH}" -m "ci: merge ${CIRCLE_BRANCH} -> main [skip ci]" || {
+              echo "⚠️ Merge con conflictos. Abortando auto-merge."
+              exit 1
+            }
+
+            # Empuja a main
+            git push "$TOKEN_URL" main
+
 workflows:
   build:
     jobs:
       - build_test_package
+      - merge_to_main:
+          requires:
+            - build_test_package
+          filters:
+            branches:
+              ignore:
+                - main   # no auto-merge cuando el build ya viene desde main
