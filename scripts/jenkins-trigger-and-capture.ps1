@@ -62,7 +62,7 @@ $retry = 0
 $healthy = $false
 while ($retry -lt $MaxRetries) {
     try {
-        $resp = Invoke-WebRequest -Uri "$JenkinsUrl/login" -Method Head -TimeoutSec 10 -SessionVariable 'Session' -ErrorAction Stop
+        $resp = Invoke-WebRequest -Uri "$JenkinsUrl/login" -Method Head -TimeoutSec 10 -SessionVariable 'Session' -UseBasicParsing -ErrorAction Stop
         if ($resp.StatusCode -eq 200) {
             $healthy = $true
             Log-Info "Jenkins is reachable."
@@ -117,7 +117,7 @@ $queueItemUrl = $null
 while ($retry -lt $MaxRetries) {
     try {
         # Using Invoke-WebRequest to get headers (Location)
-        $resp = Invoke-WebRequest -Uri "$JenkinsUrl/job/$JobName/build?delay=0sec" -Method Post -Headers $PostHeaders -WebSession $Session -TimeoutSec 30 -ErrorAction Stop
+        $resp = Invoke-WebRequest -Uri "$JenkinsUrl/job/$JobName/build?delay=0sec" -Method Post -Headers $PostHeaders -WebSession $Session -TimeoutSec 30 -UseBasicParsing -ErrorAction Stop
         if ($resp.Headers["Location"]) {
             $queueItemUrl = $resp.Headers["Location"]
             Log-Info "Build triggered successfully. Queue Item: $queueItemUrl"
