@@ -40,7 +40,7 @@ $base64 = [Convert]::ToBase64String($bytes)
 $AuthHeader = @{ "Authorization" = "Basic $base64" }
 
 # Session handling
-$Session = Microsoft.PowerShell.Commands.WebRequestSession::new()
+$Session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 
 function Get-Timestamp { return Get-Date -Format "yyyy-MM-dd HH:mm:ss" }
 
