@@ -23,6 +23,12 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // Fix ESLint TypeScript conflict
+      '@typescript-eslint/no-unused-expressions': ['error', {
+        allowShortCircuit: true,
+        allowTernary: true,
+        allowTaggedTemplates: true
+      }],
     },
   },
 )

@@ -112,9 +112,9 @@ pipeline {
             }
             post {
                 always {
-                    // Publicar reportes JUnit y Archivos HTML/JSON
-                    junit testResults: 'reports/**/*.xml', allowEmptyResults: true
+                    // Archivar reportes sin JUnit (plugin no disponible)
                     archiveArtifacts artifacts: 'reports/**', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'reports/**/*.xml', allowEmptyArchive: true
                 }
             }
         }
@@ -144,6 +144,8 @@ pipeline {
             }
             post {
                 success {
+                    // Crear zip del build
+                    sh 'cd dist && zip -r ../dist.zip .'
                     archiveArtifacts artifacts: 'dist.zip', fingerprint: false, onlyIfSuccessful: true
                 }
             }
