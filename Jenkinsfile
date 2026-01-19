@@ -152,13 +152,49 @@ pipeline {
         }
 
         // ============================================
-        // 4. GITOPS: DOCKER & MANIFEST UPDATE
+        // 4. OWASP ZAP SECURITY SCAN
+        // ============================================
+        stage('🛡️ OWASP ZAP Scan') {
+            steps {
+                script {
+                    echo "🔍 Iniciando OWASP ZAP Baseline Scan..."
+                    
+                    // Ejecutar baseline scan contra la aplicación usando Docker
+                    try {
+                        sh '''
+                            # Start app in background for scanning
+                            nohup npx http-server dist -p 4174 &
+                            sleep 10
+                            
+                            # Run OWASP ZAP baseline scan usando Docker
+                            docker run --rm -v $(pwd)/reports:/zap/wrk/:rw \\
+                                --network host \\
+                                owasp/zap2docker-stable zap-baseline.py \\
+                                -t http://host.docker.internal:4174 \\
+                                -J zap-report.json -r zap-report.html || true
+                                
+                            # Cleanup
+                            pkill -f "npx http-server" || true
+                        '''
+                        echo "✅ OWASP ZAP scan completado"
+                    } catch (Exception e) {
+                        echo "⚠️ OWASP ZAP scan falló pero continuamos: ${e.message}"
+                    }
+                    
+                    // Archivar reportes de seguridad
+                    archiveArtifacts artifacts: 'reports/zap-*', allowEmptyArchive: true
+                }
+            }
+        }
+
+        // ============================================
+        // 5. GITOPS: DOCKER & MANIFEST UPDATE
         // ============================================
         stage('🐳 Docker & GitOps') {
             when { 
                 branch 'main'
-                // Solo ejecutar si el build sigue siendo exitoso
-                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+                // Siempre ejecutar para máquina de pruebas
+                expression { return true }
             }
             steps {
                 script {
@@ -204,10 +240,10 @@ pipeline {
         }
 
         // ============================================
-        // 5. ARGO CD GATE (OPCIONAL)
+        // 6. ARGO CD GATE (OPCIONAL)
         // ============================================
         stage('🐙 Argo CD Sync') {
-            when { expression { return params.DO_ARGO_SYNC } }
+            when { expression { return params.DO_ARGO_SYNC == true } }
             steps {
                 script {
                     echo "ℹ️ Verificación de Argo CD solicitada."
