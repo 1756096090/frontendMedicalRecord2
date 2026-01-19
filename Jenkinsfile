@@ -144,9 +144,9 @@ pipeline {
             }
             post {
                 success {
-                    // Crear zip del build
-                    sh 'cd dist && zip -r ../dist.zip .'
-                    archiveArtifacts artifacts: 'dist.zip', fingerprint: false, onlyIfSuccessful: true
+                    // Crear archivo tar del build (zip no disponible)
+                    sh 'cd dist && tar -czf ../dist.tar.gz .'
+                    archiveArtifacts artifacts: 'dist.tar.gz', fingerprint: false, onlyIfSuccessful: true
                 }
             }
         }
