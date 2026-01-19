@@ -1,0 +1,10 @@
+import jenkins.model.Jenkins
+
+def instance = Jenkins.getInstance()
+try {
+    instance.setCrumbIssuer(null)
+    instance.save()
+    println("Disabled CSRF crumb issuer (temporary)")
+} catch(Exception e) {
+    println("Failed to disable crumb issuer: ${e}")
+}

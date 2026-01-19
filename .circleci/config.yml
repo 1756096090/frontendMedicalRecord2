@@ -1,0 +1,190 @@
+version: 2.1
+
+
+parameters:
+  notify_telegram:
+    type: boolean
+    default: true
+
+executors:
+  node24_browsers:
+    docker:
+      - image: cimg/node:24.6-browsers
+
+jobs:
+  build_test_package:
+    executor: node24_browsers
+    environment:
+      CI: "true"
+      APP_URL: "http://localhost:4173"
+    steps:
+      - checkout
+      - run:
+          name: Versions
+          command: |
+            node -v
+            npm -v
+            npx -y vite --version || true
+      - run:
+          name: Cache key
+          command: |
+            if [ -f package-lock.json ]; then
+              echo "export NPM_LOCK_HASH=$(sha256sum package-lock.json | cut -d' ' -f1)" >> $BASH_ENV
+            else
+              echo "export NPM_LOCK_HASH=no-lock" >> $BASH_ENV
+            fi
+            source $BASH_ENV
+      - restore_cache:
+          keys:
+            - npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
+            - npm-v1-{{ arch }}-
+      - run:
+          name: Install deps
+          command: |
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install
+            fi
+      - save_cache:
+          key: npm-v1-{{ arch }}-{{ .Environment.NPM_LOCK_HASH }}
+          paths:
+            - ~/.npm
+      - run:
+          name: Unit tests (Vitest)
+          command: npm run test:unit
+      - store_artifacts:
+          path: coverage
+          destination: coverage
+          when: always
+      - run:
+          name: Build (si existe) y validar dist
+          command: |
+            node -e "try{const p=require('./package.json');process.exit(p.scripts&&p.scripts.build?0:1)}catch(e){process.exit(1)}"
+            if [ $? -eq 0 ]; then
+              npm run build
+            else
+              echo 'No hay script "build"; se omite.'
+            fi
+            if [ ! -d dist ] || [ ! -f dist/index.html ]; then
+              echo "❌ No existe dist/index.html. Revisa tu build de Vite."
+              exit 1
+            fi
+      - run:
+          name: Preview + Selenium (mismo step, server estático)
+          command: |
+            set -euo pipefail
+            SERVE_CMD="npx -y serve dist -l 4173"
+            echo "Usando: $SERVE_CMD"
+            ($SERVE_CMD &> /tmp/preview.log) &
+            PREVIEW_PID=$!
+            echo "preview pid=$PREVIEW_PID"
+            for i in $(seq 1 120); do
+              if curl -fsS "$APP_URL" >/dev/null; then
+                echo "✅ preview OK en $APP_URL"
+                break
+              fi
+              if ! ps -p $PREVIEW_PID >/dev/null 2>&1; then
+                echo "❌ El servidor murió al iniciar."
+                tail -n 200 /tmp/preview.log || true
+                exit 1
+              fi
+              echo "⏳ esperando preview... ($i)"
+              sleep 1
+            done
+            if ! curl -fsS "$APP_URL" >/dev/null; then
+              echo "❌ preview no respondió a tiempo ($APP_URL)"
+              tail -n 200 /tmp/preview.log || true
+              exit 1
+            fi
+            if node -e "try{const p=require('./package.json');process.exit(p.scripts && p.scripts['test:selenium']?0:1)}catch(e){process.exit(1)}"; then
+              echo "▶️  npm run test:selenium"
+              APP_URL="$APP_URL" npm run test:selenium
+            else
+              echo "No hay script test:selenium; se omite Selenium."
+            fi
+            kill $PREVIEW_PID || true
+            wait $PREVIEW_PID || true
+          no_output_timeout: 10m
+      - run:
+          name: Empaquetar dist.zip
+          command: zip -r dist.zip dist
+      - store_artifacts:
+          path: dist.zip
+          destination: dist.zip
+      - store_artifacts:
+          path: /tmp/preview.log
+          destination: preview.log
+      - run:
+          name: Notificar Telegram - SUCCESS
+          when: on_success
+          command: |
+            if [ "<< pipeline.parameters.notify_telegram >>" = "true" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+              EMOJI="✅"
+              MSG="$(printf '%b' "${EMOJI} CircleCI\nEstado: SUCCESS\nRepo: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}\nRama: ${CIRCLE_BRANCH}\nBuild: ${CIRCLE_BUILD_URL}\n")"
+              curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                   -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown \
+                   --data-urlencode text="$MSG" >/dev/null || true
+            fi
+      - run:
+          name: Notificar Telegram - FAILED
+          when: on_fail
+          command: |
+            if [ "<< pipeline.parameters.notify_telegram >>" = "true" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+              EMOJI="❌"
+              MSG="$(printf '%b' "${EMOJI} CircleCI\nEstado: FAILED\nRepo: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}\nRama: ${CIRCLE_BRANCH}\nBuild: ${CIRCLE_BUILD_URL}\n")"
+              curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                   -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode=Markdown \
+                   --data-urlencode text="$MSG" >/dev/null || true
+            fi
+
+  merge_to_main:
+    docker:
+      - image: cimg/base:stable
+    environment:
+      GIT_AUTHOR_NAME: "${GIT_USER_NAME}"
+      GIT_AUTHOR_EMAIL: "${GIT_USER_EMAIL}"
+      GIT_COMMITTER_NAME: "${GIT_USER_NAME}"
+      GIT_COMMITTER_EMAIL: "${GIT_USER_EMAIL}"
+    steps:
+      - checkout
+      - run:
+          name: Auto-merge a main (solo si AUTO_MERGE=true y no estamos en main)
+          command: |
+            set -euo pipefail
+            if [ "${AUTO_MERGE:-false}" != "true" ]; then
+              echo "AUTO_MERGE no habilitado; omitiendo."
+              exit 0
+            fi
+            if [ "${CIRCLE_BRANCH}" = "main" ]; then
+              echo "Ya estamos en main; omitiendo."
+              exit 0
+            fi
+            if [ -z "${GIT_PAT:-}" ]; then
+              echo "❌ Falta GIT_PAT (token con scope repo)."
+              exit 1
+            fi
+            git config user.name  "${GIT_USER_NAME:-circleci-bot}"
+            git config user.email "${GIT_USER_EMAIL:-ci@local}"
+            ORIGIN_URL="$(git config --get remote.origin.url)"
+            TOKEN_URL="$(echo "$ORIGIN_URL" | sed -E "s#https://#https://${GIT_PAT}@#")"
+            git fetch origin
+            git checkout main
+            git pull origin main --ff-only || true
+            git merge --no-ff "origin/${CIRCLE_BRANCH}" -m "ci: merge ${CIRCLE_BRANCH} -> main [skip ci]" || {
+              echo "⚠️ Merge con conflictos. Abortando."
+              exit 1
+            }
+            git push "$TOKEN_URL" main
+
+workflows:
+  build:
+    jobs:
+      - build_test_package
+      - merge_to_main:
+          requires:
+            - build_test_package
+          filters:
+            branches:
+              ignore:
+                - main

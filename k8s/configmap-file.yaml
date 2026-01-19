@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config-js
+  namespace: default
+data:
+  config.js: |
+    window.UNLEASH_CONFIG = {
+      url: 'https://us.app.unleash-hosted.com/usoo0039/api/frontend',
+      clientKey: '*:development.9cef15460823b431680d26c84f4c71c15bc12d23be0259377a37b42a',
+      appName: 'frontend-medical-record'
+    };

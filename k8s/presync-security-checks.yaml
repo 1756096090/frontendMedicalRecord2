@@ -1,0 +1,71 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: presync-security-checks-
+  namespace: default
+  annotations:
+    # Hook de ArgoCD: se ejecuta antes de la sincronización
+    argocd.argoproj.io/hook: PreSync
+    # Elimina el Job después de completarse exitosamente
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  # Reintentos permitidos
+  backoffLimit: 2
+  template:
+    metadata:
+      name: presync-security-checks
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: security-checks
+        image: node:24-alpine
+        workingDir: /app
+        command:
+        - sh
+        - -c
+        - |
+          echo "====================================="
+          echo "INICIANDO VERIFICACIONES DE SEGURIDAD"
+          echo "====================================="
+          
+          # Clonar el repositorio
+          echo "📦 Clonando repositorio..."
+          apk add --no-cache git
+          git clone https://github.com/1756096090/frontendMedicalRecord2.git /app
+          cd /app
+          
+          # Instalar dependencias
+          echo "📥 Instalando dependencias..."
+          npm ci || npm install
+          
+          echo ""
+          echo "====================================="
+          echo "🔍 ESLINT - ANÁLISIS DE CÓDIGO"
+          echo "====================================="
+          npm run lint || {
+            echo "⚠️  ESLint encontró problemas. Revisar el código."
+            exit 1
+          }
+          echo "✅ ESLint: Sin problemas detectados"
+          
+          echo ""
+          echo "====================================="
+          echo "🛡️  OWASP - ANÁLISIS DE VULNERABILIDADES"
+          echo "====================================="
+          set +e  # No detener el script por errores
+          npm audit --audit-level=moderate
+          AUDIT_EXIT_CODE=$?
+          if [ $AUDIT_EXIT_CODE -ne 0 ]; then
+            echo "⚠️  Se encontraron vulnerabilidades de seguridad."
+            echo "📊 Generando reporte..."
+            npm audit --json > /tmp/npm-audit.json || true
+            echo "⚠️  Advertencia: Se encontraron vulnerabilidades, pero el deployment continuará."
+          fi
+          set -e  # Reactivar detención por errores
+          echo "✅ OWASP: Análisis completado"
+          
+          echo ""
+          echo "====================================="
+          echo "✅ VERIFICACIONES COMPLETADAS"
+          echo "====================================="
+          echo "El código está listo para deployment"

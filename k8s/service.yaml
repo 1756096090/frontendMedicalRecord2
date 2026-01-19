@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-medical-record
+  labels:
+    app: frontend-medical-record
+spec:
+  # Tipo de servicio: NodePort para exponer el frontend fuera del clúster
+  type: NodePort
+  selector:
+    app: frontend-medical-record
+  ports:
+  - port: 30561
+    targetPort: 30561
+    nodePort: 30561
+    protocol: TCP
+    name: http

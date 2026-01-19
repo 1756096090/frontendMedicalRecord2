@@ -1,0 +1,59 @@
+# Dependencias
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Build output
+dist
+dist.zip
+build
+coverage
+
+# Control de versiones
+.git
+.gitignore
+.gitattributes
+
+# IDE y editores
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+tests
+*.test.ts
+*.test.tsx
+*.test.js
+*.test.jsx
+__tests__
+coverage
+
+# CI/CD
+.circleci
+.github
+Jenkinsfile
+
+# Archivos de configuración local
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+
+# Temporal
+tmp
+temp
+*.tmp
+
+# Documentación
+README.md
+CONCLUSION.md
+ARGOCD_INSTALLATION.md
+SETUP_COMPLETE.md

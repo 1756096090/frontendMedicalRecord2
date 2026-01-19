@@ -1,0 +1,92 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: postsync-security-scan-
+  namespace: default
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      name: postsync-security-scan
+    spec:
+      restartPolicy: Never
+      initContainers:
+      # Generar reportes ESLint y npm audit
+      - name: generate-reports
+        image: node:24-alpine
+        workingDir: /workspace
+        command:
+        - sh
+        - -c
+        - |
+          echo "📦 Clonando repositorio..."
+          apk add --no-cache git
+          git clone https://github.com/1756096090/frontendMedicalRecord2.git /workspace
+          cd /workspace
+          
+          echo "📥 Instalando dependencias..."
+          npm ci || npm install
+          
+          echo "📝 Generando reporte ESLint..."
+          npm run lint:report || true
+          
+          echo "🛡️  Generando reporte OWASP dependencias..."
+          npm run audit:report || true
+          
+          echo "📋 Copiando reportes..."
+          mkdir -p /reports
+          cp -r reports/* /reports/ || true
+          cp k8s/security-dashboard.html /reports/../index.html || true
+          
+          echo "✅ Reportes estáticos generados"
+        volumeMounts:
+        - name: security-reports
+          mountPath: /reports
+      containers:
+      # OWASP ZAP scan
+      - name: owasp-zap-scan
+        image: zaproxy/zap-stable:latest
+        command:
+        - sh
+        - -c
+        - |
+          echo "====================================="
+          echo "🔒 OWASP ZAP - ANÁLISIS DINÁMICO"
+          echo "====================================="
+          
+          # Ajusta esta URL según tu servicio
+          TARGET_URL="http://frontend-medical-record-service:80"
+          
+          echo "🎯 Target: $TARGET_URL"
+          echo "🔍 Ejecutando escaneo de seguridad..."
+          
+          # Esperar a que el servicio esté listo
+          sleep 10
+          
+          # Ejecutar ZAP Baseline Scan
+          zap-baseline.py \
+            -t "$TARGET_URL" \
+            -r /zap/wrk/owasp-zap-report.html \
+            -J /zap/wrk/owasp-zap-report.json \
+            -I || true
+          
+          # Copiar reportes al volumen compartido
+          cp /zap/wrk/owasp-zap-report.* /reports/ 2>/dev/null || echo "⚠️  No se generaron reportes ZAP"
+          
+          echo ""
+          echo "✅ Escaneo OWASP ZAP completado"
+          ls -lh /reports/
+        volumeMounts:
+        - name: security-reports
+          mountPath: /reports
+        - name: zap-workdir
+          mountPath: /zap/wrk
+      volumes:
+      - name: security-reports
+        persistentVolumeClaim:
+          claimName: security-reports-pvc
+      - name: zap-workdir
+        emptyDir: {}

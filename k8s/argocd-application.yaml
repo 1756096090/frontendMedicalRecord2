@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: frontend-medical-record
+  # Argo CD debe estar instalado en el namespace 'argocd'
+  namespace: argocd
+spec:
+  # Proyecto de Argo CD (default es el proyecto por defecto)
+  project: default
+  
+  # Fuente: Repositorio Git con los manifiestos de Kubernetes
+  source:
+    # URL del repositorio GitHub (HTTPS)
+    repoURL: https://github.com/1756096090/frontendMedicalRecord2.git
+    # Rama a monitorear
+    targetRevision: main
+    # Ruta dentro del repo donde están los manifiestos K8s
+    path: k8s
+  
+  # Destino: Cluster y namespace donde se desplegará la aplicación
+  destination:
+    # URL del cluster de Kubernetes (por defecto, el mismo donde corre Argo CD)
+    server: https://kubernetes.default.svc
+    # Namespace donde se crearán los recursos
+    namespace: default
+  
+  # Política de sincronización: HABILITA SINCRONIZACIÓN AUTOMÁTICA
+  syncPolicy:
+    # Sincronización automática: Argo CD detecta cambios en Git y los aplica automáticamente
+    automated:
+      # prune: elimina recursos que ya no están en Git
+      prune: true
+      # selfHeal: revierte cambios manuales en el cluster para mantener el estado deseado en Git
+      selfHeal: true
+    
+    # Opciones adicionales de sincronización
+    syncOptions:
+    - CreateNamespace=true  # Crea el namespace automáticamente si no existe
+    
+  # MONITOREO DEL ESTADO:
+  # Con esta configuración, puedes monitorear el estado de los despliegues vía:
+  # 1. UI de Argo CD: Muestra el estado de salud y sincronización en tiempo real
+  # 2. CLI de Argo CD: `argocd app get frontend-medical-record`
+  # 3. Notificaciones: Argo CD puede enviar notificaciones a Slack, Telegram, etc.
+  # 
+  # Estados posibles:
+  # - Synced: Los recursos en el cluster coinciden con Git
+  # - OutOfSync: Hay diferencias entre Git y el cluster
+  # - Healthy: Los recursos están funcionando correctamente
+  # - Progressing: Despliegue en curso
+  # - Degraded: Hay problemas con los recursos

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-unleash-config
+  namespace: default
+data:
+  VITE_UNLEASH_URL: "https://us.app.unleash-hosted.com/usoo0039/api/frontend"
+  VITE_UNLEASH_CLIENT_KEY: "*:development.9cef15460823b431680d26c84f4c71c15bc12d23be0259377a37b42a"
+  VITE_UNLEASH_APP_NAME: "frontend-medical-record"
