@@ -25,7 +25,8 @@ pipeline {
 
     parameters {
         booleanParam(name: 'NOTIFY_TELEGRAM', defaultValue: true, description: 'Enviar notificaciones por Telegram')
-        booleanParam(name: 'DO_ARGO_SYNC', defaultValue: false, description: 'Intentar check status en ArgoCD')
+        booleanParam(name: 'DO_ARGO_SYNC', defaultValue: true, description: 'Intentar check status en ArgoCD')
+        booleanParam(name: 'RUN_OWASP_SCAN', defaultValue: true, description: 'Ejecutar OWASP ZAP Security Scan')
     }
 
     environment {
@@ -155,6 +156,7 @@ pipeline {
         // 4. OWASP ZAP SECURITY SCAN
         // ============================================
         stage('🛡️ OWASP ZAP Scan') {
+            when { expression { return params.RUN_OWASP_SCAN == true } }
             steps {
                 script {
                     echo "🔍 Iniciando OWASP ZAP Baseline Scan..."
@@ -247,7 +249,17 @@ pipeline {
             steps {
                 script {
                     echo "ℹ️ Verificación de Argo CD solicitada."
-                    echo "⚠️ CLI no disponible in-agent. Por favor verifica el dashboard de ArgoCD."
+                    try {
+                        // Verificar status de ArgoCD app
+                        sh '''
+                            echo "🐙 Checking ArgoCD application status..."
+                            kubectl get applications -n argocd || echo "No ArgoCD applications found"
+                            kubectl get pods -n argocd
+                            echo "✅ ArgoCD verification completed"
+                        '''
+                    } catch (Exception e) {
+                        echo "⚠️ ArgoCD check failed but continuing: ${e.message}"
+                    }
                 }
             }
         }
