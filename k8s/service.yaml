@@ -10,8 +10,8 @@ spec:
   selector:
     app: frontend-medical-record
   ports:
-  - port: 30561
-    targetPort: 30561
+  - port: 80
+    targetPort: 80
     nodePort: 30561
     protocol: TCP
     name: http

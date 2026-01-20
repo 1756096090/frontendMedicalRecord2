@@ -56,7 +56,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         };
 
         checkAuth();
-    }, [token, userController]);
+    }, [diagnosisController, token, userController]);
 
     if (loading) {
         return <div>Loading...</div>; // Optionally, show a loading state

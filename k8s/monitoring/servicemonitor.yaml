@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-medical-record-metrics
+  namespace: default
+  labels:
+    app: frontend-medical-record
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "30561"
+    prometheus.io/path: "/metrics"
+spec:
+  selector:
+    app: frontend-medical-record
+  ports:
+  - name: metrics
+    port: 30561
+    targetPort: 30561
+    protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: frontend-medical-record
+  namespace: monitoring
+  labels:
+    app: frontend-medical-record
+spec:
+  selector:
+    matchLabels:
+      app: frontend-medical-record
+  namespaceSelector:
+    matchNames:
+    - default
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scheme: http
+---
+# Configuración para exponer métricas básicas desde nginx
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-prometheus-config
+  namespace: default
+data:
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+        
+        # Configuración de logs para métricas
+        log_format prometheus '$remote_addr - $remote_user [$time_local] '
+                             '"$request" $status $body_bytes_sent '
+                             '"$http_referer" "$http_user_agent" '
+                             'request_time:$request_time '
+                             'upstream_response_time:$upstream_response_time';
+        
+        access_log /var/log/nginx/access.log prometheus;
+        
+        # Servidor principal
+        server {
+            listen 80;
+            server_name _;
+            root /usr/share/nginx/html;
+            index index.html;
+            
+            # Métricas endpoint
+            location /metrics {
+                stub_status on;
+                access_log off;
+            }
+            
+            # Aplicación principal
+            location / {
+                try_files $uri $uri/ /index.html;
+                add_header Cache-Control "no-cache, no-store, must-revalidate";
+                add_header Pragma "no-cache";
+                add_header Expires "0";
+            }
+            
+            # Health check
+            location /health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+        }
+        
+        # Servidor de métricas en puerto separado
+        server {
+            listen 8080;
+            location /nginx_status {
+                stub_status on;
+                access_log off;
+            }
+        }
+    }

@@ -97,7 +97,7 @@ const PatientEdit: React.FC = () => {
                 console.error("Failed to load patient:", error);
             });
         }
-    }, [id, controller]);
+    }, [id, controller, diagnosisProcedureController, procedureController]);
 
     const getReport = async (IDProcedure: string, IDPatient: string): Promise<ReportCore> => {
         const dataReport = await diagnosisProcedureController.ReportCore(IDProcedure, IDPatient);

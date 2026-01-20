@@ -1,0 +1,192 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-config
+  namespace: monitoring
+  labels:
+    name: grafana-dashboards-config
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-kubernetes
+  namespace: monitoring
+data:
+  kubernetes-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Kubernetes Cluster Monitoring",
+        "tags": ["kubernetes"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Cluster CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total[5m])) by (instance)",
+                "legendFormat": "{{instance}}"
+              }
+            ],
+            "xAxis": {
+              "show": true
+            },
+            "yAxes": [
+              {
+                "label": "CPU Usage",
+                "show": true
+              }
+            ],
+            "gridPos": {
+              "h": 9,
+              "w": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "id": 2,
+            "title": "Pod Status",
+            "type": "singlestat",
+            "targets": [
+              {
+                "expr": "kube_pod_status_phase",
+                "legendFormat": "{{phase}}"
+              }
+            ],
+            "gridPos": {
+              "h": 9,
+              "w": 12,
+              "x": 12,
+              "y": 0
+            }
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "10s"
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-medical-record
+  namespace: monitoring
+data:
+  medical-record-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Frontend Medical Record Monitoring",
+        "tags": ["medical-record", "frontend"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "HTTP Requests Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"frontend-medical-record\"}[5m])",
+                "legendFormat": "{{method}} {{code}}"
+              }
+            ],
+            "gridPos": {
+              "h": 9,
+              "w": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "id": 2,
+            "title": "Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"frontend-medical-record\"}[5m]))",
+                "legendFormat": "95th percentile"
+              }
+            ],
+            "gridPos": {
+              "h": 9,
+              "w": 12,
+              "x": 12,
+              "y": 0
+            }
+          },
+          {
+            "id": 3,
+            "title": "Active Users",
+            "type": "singlestat",
+            "targets": [
+              {
+                "expr": "active_users_total{job=\"frontend-medical-record\"}"
+              }
+            ],
+            "gridPos": {
+              "h": 6,
+              "w": 8,
+              "x": 0,
+              "y": 9
+            }
+          },
+          {
+            "id": 4,
+            "title": "Database Connections",
+            "type": "singlestat",
+            "targets": [
+              {
+                "expr": "database_connections_active{job=\"frontend-medical-record\"}"
+              }
+            ],
+            "gridPos": {
+              "h": 6,
+              "w": 8,
+              "x": 8,
+              "y": 9
+            }
+          },
+          {
+            "id": 5,
+            "title": "Error Rate",
+            "type": "singlestat",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"frontend-medical-record\",code=~\"5..\"}[5m]) / rate(http_requests_total{job=\"frontend-medical-record\"}[5m])"
+              }
+            ],
+            "gridPos": {
+              "h": 6,
+              "w": 8,
+              "x": 16,
+              "y": 9
+            }
+          }
+        ],
+        "time": {
+          "from": "now-30m",
+          "to": "now"
+        },
+        "refresh": "5s"
+      }
+    }

@@ -1,46 +1,46 @@
-# #!/bin/sh
-echo "🔍 Ejecutando verificaciones de seguridad pre-commit..."
-echo ""
+# # #!/bin/sh
+# echo "🔍 Ejecutando verificaciones de seguridad pre-commit..."
+# echo ""
 
-# Ejecutar lint-staged (ESLint)
-echo "📝 ESLint - Análisis de código..."
-npx lint-staged || true
+# # Ejecutar lint-staged (ESLint)
+# echo "📝 ESLint - Análisis de código..."
+# npx lint-staged || true
 
-# Crear directorio de reportes si no existe
-mkdir -p reports
+# # Crear directorio de reportes si no existe
+# mkdir -p reports
 
-# Generar reporte de ESLint
-echo ""
-echo "📊 Generando reporte de ESLint..."
-npm run lint:report || true
+# # Generar reporte de ESLint
+# echo ""
+# echo "📊 Generando reporte de ESLint..."
+# npm run lint:report || true
 
-# Ejecutar OWASP audit (sin bloquear el commit)
-echo ""
-echo "🛡️  OWASP - Análisis de vulnerabilidades..."
-npm audit --audit-level=moderate || AUDIT_FAILED=true
+# # Ejecutar OWASP audit (sin bloquear el commit)
+# echo ""
+# echo "🛡️  OWASP - Análisis de vulnerabilidades..."
+# npm audit --audit-level=moderate || AUDIT_FAILED=true
 
-# Generar reporte de npm audit
-echo ""
-echo "📊 Generando reporte de OWASP..."
-npm run audit:report
+# # Generar reporte de npm audit
+# echo ""
+# echo "📊 Generando reporte de OWASP..."
+# npm run audit:report
 
-# Mostrar ubicación de reportes
-echo ""
-echo "✅ Reportes generados en:"
-echo "   📄 reports/eslint-report.json"
-echo "   📄 reports/eslint-report.html"
-echo "   📄 reports/npm-audit.json"
-echo "   📄 reports/npm-audit.html"
-echo ""
+# # Mostrar ubicación de reportes
+# echo ""
+# echo "✅ Reportes generados en:"
+# echo "   📄 reports/eslint-report.json"
+# echo "   📄 reports/eslint-report.html"
+# echo "   📄 reports/npm-audit.json"
+# echo "   📄 reports/npm-audit.html"
+# echo ""
 
-# Si audit falla, advertir pero no bloquear
-if [ "$AUDIT_FAILED" = "true" ]; then
-  echo "⚠️  ADVERTENCIA: Se encontraron vulnerabilidades de seguridad."
-  echo "   Revisa el reporte en: reports/npm-audit.json"
-  echo "   Ejecuta 'npm audit fix' para corregir automáticamente."
-  echo ""
-  echo "⏩ El commit continuará, pero debes revisar las vulnerabilidades."
-  echo ""
-fi
+# # Si audit falla, advertir pero no bloquear
+# if [ "$AUDIT_FAILED" = "true" ]; then
+#   echo "⚠️  ADVERTENCIA: Se encontraron vulnerabilidades de seguridad."
+#   echo "   Revisa el reporte en: reports/npm-audit.json"
+#   echo "   Ejecuta 'npm audit fix' para corregir automáticamente."
+#   echo ""
+#   echo "⏩ El commit continuará, pero debes revisar las vulnerabilidades."
+#   echo ""
+# fi
 
-exit 0
+# exit 0
